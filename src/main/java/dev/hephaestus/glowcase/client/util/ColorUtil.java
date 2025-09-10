@@ -7,10 +7,25 @@ import net.minecraft.util.Formatting;
  * @author Ampflower
  **/
 public final class ColorUtil {
+	// Custom variables here instead of minecraft.util.Colors because Minecraft's doesn't always use the
+	// most saturated/lit up values (e.g. cyan is 0xFF57FFE1, and magenta doesn't exist)
+	// All values that minecraft.util.Colors does cover are still created and preferred here for consistency
+	public static final int RED = 0xFFFF0000;
+	public static final int YELLOW = 0xFFFFFF00;
+	public static final int GREEN = 0xFF00FF00;
+	public static final int CYAN = 0xFF00FFFF;
+	public static final int BLUE = 0xFF0000FF;
+	public static final int MAGENTA = 0xFFFF00FF;
+
 	public static final int WHITE = 0xFFFFFFFF;
+	public static final int BLACK = 0xFF000000;
 	public static final int TRANSPARENT = 0x00000000;
 	public static final int ALPHA_MASK = 0xFF000000;
 	public static final int COLOR_MASK = 0x00FFFFFF;
+
+	public static final int[] RAINBOW_COLORS = new int[] { // loops back to red for hue bar in color picker
+		RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA, RED
+	};
 
 	public static int transferAlpha(int oldColor, int newColor) {
 		return (oldColor & ALPHA_MASK) | (newColor & COLOR_MASK);

@@ -1,4 +1,4 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame;
+package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
@@ -8,14 +8,31 @@ import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 public class ColorPresetWidget extends PressableWidget {
+	// Use our own array instead of Formatting.values() so we can have specific order
+	public static final Formatting[] FORMATTING_COLORS = new Formatting[] {
+		Formatting.DARK_RED, Formatting.RED, Formatting.GOLD, Formatting.YELLOW,
+		Formatting.GREEN, Formatting.DARK_GREEN, Formatting.AQUA, Formatting.DARK_AQUA,
+		Formatting.BLUE, Formatting.DARK_BLUE, Formatting.LIGHT_PURPLE, Formatting.DARK_PURPLE,
+		Formatting.WHITE, Formatting.GRAY, Formatting.DARK_GRAY, Formatting.BLACK
+	};
+
 	public final ColorPickerWidget colorPickerWidget;
 	public final Color color;
 	@Nullable
 	public Formatting formatting = null;
 	public int z = 0;
+
+	public static List<ColorPresetWidget> createDefaultPresets(ColorPickerWidget colorPickerWidget) {
+		// my goodness I'm smart
+		return Arrays.stream(FORMATTING_COLORS)
+			.map(format -> fromFormatting(colorPickerWidget, format))
+			.toList();
+	}
 
 	public ColorPresetWidget(ColorPickerWidget colorPicker, int x, int y, int width, int height, Color color) {
 		super(x, y, width, height, Text.of(""));
@@ -30,6 +47,7 @@ public class ColorPresetWidget extends PressableWidget {
 		this.z = z;
 	}
 
+	// I really don't know why these static methods are down here, but it felt wrong putting them above the constructor ??
 	public static ColorPresetWidget fromFormatting(ColorPickerWidget colorPicker, Formatting formatting) {
 		if(formatting.isColor()) {
 			//noinspection DataFlowIssue
@@ -37,7 +55,7 @@ public class ColorPresetWidget extends PressableWidget {
 			presetWidget.formatting = formatting;
 			return presetWidget;
 		}
-		return new ColorPresetWidget(colorPicker, 0, 0, 0, 0, Color.white); //fallback
+		return new ColorPresetWidget(colorPicker, 0, 0, 0, 0, Color.white); // fallback
 	}
 
 	public static ColorPresetWidget fromColor(ColorPickerWidget colorPicker, Color color) {
@@ -73,7 +91,6 @@ public class ColorPresetWidget extends PressableWidget {
 				this.colorPickerWidget.setColor(this.color);
 			}
 		}
-
 	}
 
 	@Override

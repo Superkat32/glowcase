@@ -2,7 +2,7 @@ package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import com.mojang.datafixers.util.Pair;
 import dev.hephaestus.glowcase.Glowcase;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.util.NoteTextColorResource;
 import dev.hephaestus.glowcase.item.component.NoteComponent;
 import dev.hephaestus.glowcase.packet.C2SEditNoteItem;

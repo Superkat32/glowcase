@@ -2,7 +2,7 @@ package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import com.google.common.primitives.Floats;
 import dev.hephaestus.glowcase.block.entity.TextBlockEntity;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
 import eu.pb4.placeholders.api.parsers.tag.TagRegistry;
@@ -137,7 +137,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 		}).dimensions(middle + 2, 20 + innerPadding, 72, 20).build();
 
 		this.colorPickerWidget = ColorPickerWidget.builder(this, 216, 10).size(182, 104).build();
-		this.colorPickerWidget.toggle(false); //start deactivated
+		this.colorPickerWidget.toggle(false); // start deactivated
 
 		this.viewDistanceField = new TextFieldWidget(this.client.textRenderer, middle - 203, 20 + innerPadding, 83 + innerPadding, 20, Text.empty());
 		this.viewDistanceField.setText(String.valueOf(this.textBlockEntity.viewDistance));

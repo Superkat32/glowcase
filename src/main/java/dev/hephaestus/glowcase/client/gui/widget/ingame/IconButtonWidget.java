@@ -30,7 +30,7 @@ public class IconButtonWidget extends ButtonWidget {
 	}
 
 	@Override
-	protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
 		Identifier drawnIcon = this.icon;
 		if(this.hoverIcon != null && this.isMouseOver(mouseX, mouseY)) {
 			drawnIcon = this.hoverIcon;
