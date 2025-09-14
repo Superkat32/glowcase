@@ -185,7 +185,7 @@ public class NoteEditScreen extends TextEditorScreen {
 
 
 		this.colorPickerWidget = ColorPickerWidget.builder(this, 216, 10).size(182, 104).build();
-		this.colorPickerWidget.toggle(false); //start deactivated
+		this.colorPickerWidget.toggle(false); // start deactivated
 
 		this.addDrawableChild(colorPickerWidget);
 

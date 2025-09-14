@@ -1,6 +1,7 @@
 package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.util.ColorUtil;
 import eu.pb4.placeholders.api.parsers.tag.TagRegistry;
 import eu.pb4.placeholders.api.parsers.tag.TextTag;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -18,8 +19,8 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 	abstract SelectionManager getSelectionManager();
 
 	protected void addFormattingButtons(int x, int y, int innerPadding, int buttonSize, int buttonPadding) {
-		int buttonX = x + innerPadding * 2; //adding numbers to this variable because I personally find that more readable, that's all
-		int buttonY = y + innerPadding; //reduce the times this is calculated
+		int buttonX = x + innerPadding * 2;
+		int buttonY = y + innerPadding; // reduce the times this is calculated
 		ButtonWidget boldText = ButtonWidget.builder(Text.literal("B").formatted(Formatting.BOLD), action -> {
 			insertTag(TagRegistry.SAFE.getTag("bold"), true);
 		}).dimensions(buttonX, buttonY, buttonSize, buttonSize).build();
@@ -51,7 +52,7 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 			colorPickerWidget.setPosition(216, 10);
 			colorPickerWidget.setTargetElement(this.colorText);
 			colorPickerWidget.setOnAccept(picker -> {
-				picker.insertColor(picker.color);
+				picker.insertColor(picker.getCurrentColor());
 				picker.toggle(false);
 			});
 			colorPickerWidget.setOnCancel(picker -> picker.toggle(false));
@@ -59,7 +60,7 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 				if(formatting != null) {
 					insertFormattingTag(formatting);
 				} else {
-					insertHexTag(ColorPickerWidget.getHexCode(color));
+					insertHexTag(ColorUtil.getHexCode(color));
 				}
 				this.toggleColorPicker(false);
 			});
@@ -86,7 +87,7 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 
 	public void insertTag(TextTag tag, boolean findShortest) {
 		if(tag == null) return;
-		//find the alias with the least amount of characters
+		// find the alias with the least amount of characters
 		String name = tag.name();
 		if(findShortest && tag.aliases().length > 1) {
 			String shortest = Arrays.stream(tag.aliases()).min(Comparator.comparing(String::length)).get();

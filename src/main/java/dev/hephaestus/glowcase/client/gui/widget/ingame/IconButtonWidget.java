@@ -15,7 +15,6 @@ public class IconButtonWidget extends ButtonWidget {
 	public Identifier hoverIcon;
 	public int iconWidth;
 	public int iconHeight;
-	public int z;
 
 	public static IconButtonWidget.Builder builder(Identifier icon, ButtonWidget.PressAction onPress) {
 		return new IconButtonWidget.Builder(icon, onPress);
@@ -38,13 +37,12 @@ public class IconButtonWidget extends ButtonWidget {
 		context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, drawnIcon, this.getX(), this.getY(), this.iconWidth, this.iconHeight);
 	}
 
-	public void setPosition(int x, int y, int z, int size, int iconSize) {
+	public void setPosition(int x, int y, int size, int iconSize) {
 		this.setX(x);
 		this.setY(y);
 		this.setDimensions(size, size);
 		this.iconWidth = iconSize;
 		this.iconHeight = iconSize;
-		this.z = z;
 	}
 
 	@Environment(EnvType.CLIENT)

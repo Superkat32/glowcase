@@ -19,7 +19,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
 import java.util.List;
 
 //TODO: multi-character selection at some point? it may be a bit complex but it'd be nice
@@ -38,7 +37,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 	private ButtonWidget changeAlignment;
 	private TextFieldWidget colorEntryWidget;
 	private TextFieldWidget backgroundColorEntryWidget;
-	private Color colorEntryPreColorPicker; //used for color picker cancel button
+	private int prevColorEntry; // used for color picker cancel button
 	private ButtonWidget zOffsetToggle;
 	private CheckboxWidget shadowToggle;
 
@@ -101,12 +100,13 @@ public class TextBlockEditScreen extends TextEditorScreen {
 		this.colorEntryWidget.setText(ColorUtil.toAlphaHex(this.textBlockEntity.color));
 		this.colorEntryWidget.setChangedListener(string -> {
 			ColorUtil.parse(this.colorEntryWidget.getText(), this.textBlockEntity.color).ifSuccess(newColor -> {
+				// TODO - alpha slider limits to apply for this
 				final int color = (Math.max(newColor >>> 24, 0x1A) << 24) | (newColor & ColorUtil.COLOR_MASK);
 
 				this.textBlockEntity.color = color;
-				//make sure it doesn't update from the color picker updating the text
+				// make sure it doesn't update from the color picker updating the text
 				if (this.colorEntryWidget.isFocused()) {
-					this.colorPickerWidget.setColor(new Color(color));
+					this.colorPickerWidget.setColor(color);
 				}
 				this.textBlockEntity.renderDirty = true;
 			});
@@ -119,7 +119,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			ColorUtil.parse(string, this.textBlockEntity.backgroundColor).ifSuccess(newColor -> {
 				this.textBlockEntity.backgroundColor = newColor;
 				if (this.colorEntryWidget.isFocused()) {
-					this.colorPickerWidget.setColor(new Color(newColor));
+					this.colorPickerWidget.setColor(newColor);
 				}
 				this.textBlockEntity.renderDirty = true;
 			});
@@ -389,20 +389,18 @@ public class TextBlockEditScreen extends TextEditorScreen {
 		this.colorPickerWidget.setTargetElement(textWidget);
 		this.colorPickerWidget.setOnAccept(null);
 		this.colorPickerWidget.setOnCancel(picker -> {
-			picker.setColor(this.colorEntryPreColorPicker);
+			picker.setColor(this.prevColorEntry);
 		});
 		this.colorPickerWidget.setChangeListener(color -> {
-			final int newColor = ColorUtil.transferAlpha(this.colorEntryPreColorPicker.getRGB(), color.getRGB());
-			textWidget.setText(ColorUtil.toAlphaHex(newColor));
+			textWidget.setText(ColorUtil.toAlphaHex(color));
 		});
 		this.colorPickerWidget.setPresetListener((color, formatting) -> {
 			this.colorPickerWidget.setColor(color);
 		});
 		ColorUtil.parse(textWidget.getText(), ColorUtil.WHITE).ifSuccess(color -> {
-			final Color pickerColor = new Color(color);
-			this.colorEntryPreColorPicker = pickerColor;
-			this.colorPickerWidget.setColor(pickerColor);
-		}).ifError(textColorError -> this.colorEntryPreColorPicker = this.colorPickerWidget.getCurrentColor());
+			this.prevColorEntry = color;
+			this.colorPickerWidget.setColor(color);
+		}).ifError(textColorError -> this.prevColorEntry = this.colorPickerWidget.getCurrentColor());
 		toggleColorPicker(true);
 	}
 

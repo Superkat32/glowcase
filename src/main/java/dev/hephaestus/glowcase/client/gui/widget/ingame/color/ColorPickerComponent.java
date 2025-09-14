@@ -4,10 +4,10 @@ import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * This is equivalent to a 2d box with some extra variables for holding thumb positions.<br><br>
+ * A class for containing the bounds of a {@link ColorPickerWidget} "area" (e.g. color preview, hue slider, sat/light picker, alpha slider, etc.).<br><br>
+ * This is equivalent to a 2d box with some extra variables/methods for holding thumb positions and mouse clicking checks/handling. However, no rendering is actually done from here.
  *
- * This class provides methods for checking if a mouse's position is within its bounds,
- * and moving the thumbs around based on a mouse's click/drag position.
+ * @see ColorPickerWidget
  */
 public class ColorPickerComponent {
 	private boolean mouseDown = false;
@@ -141,4 +141,21 @@ public class ColorPickerComponent {
 
 	// endregion
 
+	/**
+	 * Setter method for applying a float from 0f-1f based on where a mouse clicked on this component.<br><br>
+	 * Applied based on the horizontal distance along this component.
+	 */
+	@FunctionalInterface
+	public interface ComponentSetter {
+		void apply(float mouseHorizontalLerp);
+	}
+
+	/**
+	 * Setter method for applying a float from 0f-1f based on where a mouse clicked on this component.<br><br>
+	 * Applied based on the horizontal and vertical distance along this component.
+	 */
+	@FunctionalInterface
+	public interface ComponentDoubleSetter {
+		void apply(float mouseHorizontalLerp, float mouseVerticalLerp);
+	}
 }
