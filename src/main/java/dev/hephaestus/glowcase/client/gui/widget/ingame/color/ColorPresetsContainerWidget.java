@@ -1,5 +1,6 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
+import dev.hephaestus.glowcase.client.util.ColorUtil;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.PressableWidget;
@@ -52,19 +53,19 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 		renderPresetList(context, this.transparentPresets, this.getY() + (this.presetSize + this.presetPadding) * 2, mouseX, mouseY, delta);
 	}
 
-	protected int renderPresetList(DrawContext context, List<ColorPresetWidget> presets, int yOffset, int mouseX, int mouseY, float delta) {
+	protected void renderPresetList(DrawContext context, List<ColorPresetWidget> presets, int yOffset, int mouseX, int mouseY, float delta) {
 		int x = this.getX();
 		int maxY = this.getY() + this.getHeight();
-		return renderPresetList(context, presets, x, yOffset, maxY, this.presetSize, this.presetPadding, this.presetsPerLine, mouseX, mouseY, delta);
+		renderPresetList(context, presets, x, yOffset, maxY, this.presetSize, this.presetPadding, this.presetsPerLine, mouseX, mouseY, delta);
 	}
 
 	// Render each preset widget in a grid, left to right, top to bottom
-	protected int renderPresetList(
+	protected void renderPresetList(
 		DrawContext context, List<ColorPresetWidget> presets, int x, int y, int maxY,
 		int presetSize, int presetPadding, int presetsPerLine,
 		int mouseX, int mouseY, float delta
 	) {
-		if(presets.isEmpty()) return y;
+		if(presets.isEmpty()) return;
 
 		int paddedSize = presetSize + presetPadding;
 		int presetX = x;
@@ -80,10 +81,9 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 
 			presetY += paddedSize;
 			int currentScaleY = presetY + paddedSize;
-			if(currentScaleY > maxY) return presetY; // prevent overflow
+			if(currentScaleY > maxY) return; // prevent overflow
 			presetX = x;
 		}
-		return y;
 	}
 
 	public boolean tryClickingPresets(double mouseX, double mouseY) {

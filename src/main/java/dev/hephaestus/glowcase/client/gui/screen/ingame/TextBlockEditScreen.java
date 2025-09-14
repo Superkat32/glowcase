@@ -136,7 +136,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			this.zOffsetToggle.setMessage(Text.literal(this.textBlockEntity.zOffset.name()));
 		}).dimensions(middle + 2, 20 + innerPadding, 72, 20).build();
 
-		this.colorPickerWidget = ColorPickerWidget.builder(this, 216, 10).size(182, 104).build();
+		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
 		this.colorPickerWidget.toggle(false); // start deactivated
 
 		this.viewDistanceField = new TextFieldWidget(this.client.textRenderer, middle - 203, 20 + innerPadding, 83 + innerPadding, 20, Text.empty());
@@ -289,7 +289,11 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 			return true;
 		} else {
-			setFocused(null);
+			// Allow for color picker changing while holding shift for alt presets
+			if(!this.colorPickerWidget.active && keyCode != GLFW.GLFW_KEY_LEFT_SHIFT) {
+				setFocused(null);
+			}
+
 			if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
 				this.textBlockEntity.addRawLine(this.currentRow + 1,
 					this.textBlockEntity.getRawLine(this.currentRow).substring(
@@ -385,7 +389,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 	}
 
 	private void colorListenerClicked(TextFieldWidget textWidget) {
-		this.colorPickerWidget.setPosition(Math.min(textWidget.getX(), width - colorPickerWidget.getWidth()), textWidget.getY() + textWidget.getHeight());
+		this.colorPickerWidget.setPosition(Math.min(textWidget.getX(), width - colorPickerWidget.getWidth() - 50), textWidget.getY() + textWidget.getHeight());
 		this.colorPickerWidget.setTargetElement(textWidget);
 		this.colorPickerWidget.setOnAccept(null);
 		this.colorPickerWidget.setOnCancel(picker -> {

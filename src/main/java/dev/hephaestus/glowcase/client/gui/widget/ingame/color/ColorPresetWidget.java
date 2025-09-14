@@ -2,19 +2,25 @@ package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
 import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
+import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ColorHelper;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Single clickable widget for displaying a color preset - intended for use in {@link ColorPresetsContainerWidget} and {@link ColorPickerWidget}.
@@ -33,15 +39,19 @@ public class ColorPresetWidget extends PressableWidget {
 	};
 
 	public static final Integer[] DEFAULT_TRANSPARENCIES = new Integer[] {
-//		0xEE000000, 0xCC000000, 0xAA000000, 0x99000000, 0x77000000, 0x55000000, 0x33000000, 0x00000000,
-		0x00000000, 0x33000000, 0x55000000, 0x77000000, 0x99000000, 0xAA000000, 0xCC000000, 0xEE000000
+		0x00000000, 0x40000000, 0x55000000, 0x77000000, 0x99000000, 0xAA000000, 0xCC000000, 0xFF000000
 	};
 
 	public final ColorPickerWidget colorPickerWidget;
 	public final int color;
 	public final float colorAlpha; // cache the alpha value in constructor
 	@Nullable
-	public Formatting formatting = null;
+	public Formatting formatting;
+
+	@Nullable
+	public final Supplier<Integer> colorCopyReferenceSupplier;
+	public boolean copyRgb;
+	public boolean copyAlpha;
 
 	public static void addDefaultWidgets(List<ColorPresetWidget> presetsList, ColorPickerWidget colorPickerWidget) {
 		// my goodness I'm smart
@@ -58,11 +68,19 @@ public class ColorPresetWidget extends PressableWidget {
 		);
 	}
 
-
-	public ColorPresetWidget(ColorPickerWidget colorPicker, int x, int y, int width, int height, int color) {
+	public ColorPresetWidget(
+		ColorPickerWidget colorPicker,
+		int x, int y, int width, int height,
+		int color, Formatting formatting,
+		Supplier<Integer> colorCopySupplier, boolean copyRgb, boolean copyAlpha
+	) {
 		super(x, y, width, height, Text.of(""));
 		this.colorPickerWidget = colorPicker;
 		this.color = color;
+		this.formatting = formatting;
+		this.colorCopyReferenceSupplier = colorCopySupplier;
+		this.copyRgb = copyRgb;
+		this.copyAlpha = copyAlpha;
 		this.colorAlpha = ColorHelper.getAlphaFloat(color);
 	}
 
@@ -75,53 +93,143 @@ public class ColorPresetWidget extends PressableWidget {
 	// I really don't know why these static methods are down here, but it felt wrong putting them above the constructor ??
 	public static ColorPresetWidget fromFormatting(ColorPickerWidget colorPicker, Formatting formatting) {
 		if(formatting.isColor()) {
-			//noinspection DataFlowIssue
-			int color = ColorHelper.withAlpha(1f, formatting.getColorValue());
-			ColorPresetWidget presetWidget = new ColorPresetWidget(colorPicker,0, 0, 0, 0, color);
-			presetWidget.formatting = formatting;
-			return presetWidget;
+			return ColorPresetWidget.Builder.createFromFormatting(colorPicker, formatting).build();
 		}
-		return new ColorPresetWidget(colorPicker, 0, 0, 0, 0, ColorUtil.WHITE); // fallback
+
+		return ColorPresetWidget.Builder.createFromColor(colorPicker, ColorUtil.WHITE).build(); // fallback
 	}
 
 	public static ColorPresetWidget fromColor(ColorPickerWidget colorPicker, int color) {
-		return new ColorPresetWidget(colorPicker, 0, 0, 0, 0, color);
+		return ColorPresetWidget.Builder.createFromColor(colorPicker, color).build();
 	}
 
 	@Override
 	protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-		if(this.colorAlpha < 1f) {
+		if(this.colorAlpha < 1f || this.shouldCopyColor()) {
 			context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, ALPHA_TEXTURE, this.getX(), this.getY(), this.getWidth(), this.getHeight());
 		}
-		context.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), this.color);
+		context.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), this.getCurrentColor());
 		if(isMouseOver(mouseX, mouseY)) {
-			drawOutline(context, this.getX() - 1, this.getY() - 1, this.getWidth() + 2, this.getHeight() + 2);
+			WidgetRenderUtil.drawOutline(context, this.getX() - 1, this.getY() - 1, this.getWidth() + 2, this.getHeight() + 2, ColorUtil.WHITE);
 		}
 	}
 
-	private void drawOutline(DrawContext context, int x, int y, int width, int height) {
-		int color = ColorUtil.WHITE;
-		context.fill(x, y, x + width, y + 1, color);
-		context.fill(x, y, x + 1, y + height, color);
-		context.fill(x + width, y, x + width - 1, y + height, color);
-		context.fill(x, y + height, x + width, y + height - 1, color);
+	public int getCurrentColor() {
+		if(this.shouldCopyColor()) {
+			//noinspection DataFlowIssue
+			int copyOverColor = colorCopyReferenceSupplier.get();
+			if(this.copyRgb) return ColorHelper.withAlpha(this.colorAlpha, copyOverColor);
+			else if (this.copyAlpha) return ColorUtil.transferAlpha(copyOverColor, this.color);
+		}
+
+		return this.color;
+	}
+
+	public boolean shouldCopyColor() {
+		return Screen.hasShiftDown() && this.colorCopyReferenceSupplier != null;
 	}
 
 	@Override
 	public void onPress() {
 		BiConsumer<Integer, Formatting> presetListener = this.colorPickerWidget.getPresetListener();
 		if(presetListener != null) {
-			presetListener.accept(this.color, this.formatting != null && this.formatting.isColor() ? this.formatting : null);
+			presetListener.accept(this.getCurrentColor(), this.formatting != null && this.formatting.isColor() ? this.formatting : null);
 		} else {
 			if(this.formatting != null && formatting.isColor()) {
-				this.colorPickerWidget.setColor(this.color);
+				this.colorPickerWidget.setColor(this.getCurrentColor());
 				this.colorPickerWidget.toggle(false);
 			} else {
-				this.colorPickerWidget.setColor(this.color);
+				this.colorPickerWidget.setColor(this.getCurrentColor());
 			}
 		}
 	}
 
 	@Override
 	protected void appendClickableNarrations(NarrationMessageBuilder builder) {}
+
+	@Environment(EnvType.CLIENT)
+	public static class Builder {
+		private final ColorPickerWidget colorPickerWidget;
+		private int x, y, width, height;
+		private int color;
+		private Formatting formatting = null;
+
+		private Supplier<Integer> colorCopySupplier = null;
+		private boolean copyRgb = false;
+		private boolean copyAlpha = false;
+
+		public Builder(ColorPickerWidget colorPickerWidget) {
+			this.colorPickerWidget = colorPickerWidget;
+		}
+
+		public static Builder create(ColorPickerWidget colorPickerWidget) {
+			return new Builder(colorPickerWidget);
+		}
+
+		public static Builder createFromFormatting(ColorPickerWidget colorPickerWidget, Formatting formatting) {
+			return new Builder(colorPickerWidget)
+				.setColor(formatting)
+				.setColorCopyReference(colorPickerWidget::getCurrentColor)
+				.setCopyAlpha(true);
+		}
+
+		public static Builder createFromColor(ColorPickerWidget colorPickerWidget, int color) {
+			return new Builder(colorPickerWidget)
+				.setColor(color)
+				.setColorCopyReference(colorPickerWidget::getCurrentColor)
+				.setCopyRgb(true);
+		}
+
+		public final Builder setPos(int x, int y, int width, int height) {
+			return this.setPos(x, y).setDims(width, height);
+		}
+
+		public final Builder setPos(int x, int y) {
+			this.x = x;
+			this.y = y;
+			return this;
+		}
+
+		public final Builder setDims(int width, int height) {
+			this.width = width;
+			this.height = height;
+			return this;
+		}
+
+		public final Builder setColor(int color) {
+			this.color = color;
+			return this;
+		}
+
+		public final Builder setColor(Formatting formatting) {
+			this.formatting = formatting;
+			//noinspection DataFlowIssue
+			this.color = ColorHelper.withAlpha(1f, formatting.getColorValue());
+			return this;
+		}
+
+		public final Builder setColorCopyReference(Supplier<Integer> colorCopySupplier) {
+			this.colorCopySupplier = colorCopySupplier;
+			return this;
+		}
+
+		public final Builder setCopyRgb(boolean copy) {
+			this.copyRgb = copy;
+			return this;
+		}
+
+		public final Builder setCopyAlpha(boolean copy) {
+			this.copyAlpha = copy;
+			return this;
+		}
+
+		public ColorPresetWidget build() {
+			return new ColorPresetWidget(
+				this.colorPickerWidget,
+				this.x, this.y, this.width, this.height,
+				this.color, this.formatting,
+				this.colorCopySupplier, this.copyRgb, this.copyAlpha
+			);
+		}
+	}
 }

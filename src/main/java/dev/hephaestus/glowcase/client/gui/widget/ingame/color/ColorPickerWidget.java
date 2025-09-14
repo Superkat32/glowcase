@@ -1,24 +1,17 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.client.gui.screen.ingame.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
+import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.client.gui.render.state.SimpleGuiElementRenderState;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.PressableWidget;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.texture.TextureSetup;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
@@ -29,7 +22,6 @@ import org.apache.commons.compress.utils.Lists;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2fStack;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -69,13 +61,11 @@ public class ColorPickerWidget extends PressableWidget {
 	private final ColorPickerComponent hueComponent = new ColorPickerComponent(this::setHue);
 	private final ColorPickerComponent satLightComponent = new ColorPickerComponent(this::setSatLat);
 	private final ColorPickerComponent alphaComponent = new ColorPickerComponent(this::setAlpha);
-	private final ColorPickerComponent presetComponent = new ColorPickerComponent();
 
 	public boolean includePresets = true;
 	protected ColorPresetsContainerWidget presetsContainerWidget;
-
-	public ArrayList<ColorPresetWidget> presetWidgets = Lists.newArrayList();
 	public boolean allowTransparency = false;
+
 	private Consumer<Integer> changeListener;
 	private BiConsumer<Integer, @Nullable Formatting> presetListener;
 	private Consumer<ColorPickerWidget> onAccept;
@@ -103,7 +93,7 @@ public class ColorPickerWidget extends PressableWidget {
 		this.presetsContainerWidget = new ColorPresetsContainerWidget(0, 0, 0, 0, this);
 
 		this.components = List.of( // order isn't used for now, but assume click priority order I suppose
-			this.previewComponent, this.satLightComponent, this.hueComponent, this.alphaComponent, this.presetComponent
+			this.previewComponent, this.satLightComponent, this.hueComponent, this.alphaComponent
 		);
 
 		this.update();
@@ -128,7 +118,7 @@ public class ColorPickerWidget extends PressableWidget {
 		context.drawTexture(RenderPipelines.GUI_TEXTURED, BACKGROUND_TEXTURE, x, y, 0, 0, width, height, 32, 32);
 		if (this.isSelected()) {
 			// draw entire color picker's outline
-			drawOutline(context, x, y, width, height, ColorUtil.WHITE);
+			WidgetRenderUtil.drawOutline(context, x, y, width, height, ColorUtil.WHITE);
 		}
 
 
@@ -151,14 +141,6 @@ public class ColorPickerWidget extends PressableWidget {
 	}
 
 	// Height values determined using these base numbers:
-	// - Normal height (with presets, no alpha) = 104 (pre-color-picker-rewrite height numbers)
-	// - Height with alpha and presets = 116 (104 + 10 + 2 -> normal height + hueHeight + presetPadding)
-	// - presetSize (normal height) = 16
-	// - previewHeight (normal height) = 52
-	// - hueHeight (normal height) = 10
-	// - presetLines (no alpha) = 2
-	// - presetLines (with alpha) = 3
-
 	// - Color picker height (with presets, no alpha) = 104 (pre-color-picker-rewrite numbers)
 	// - Color picker height (with presets & alpha) = 116 (normal height + hueHeight + presetPadding)
 	// - mainAreaHeight (with presets, no alpha) = 66 (2px top padding, no bottom padding) = 0.635 of total height
@@ -178,7 +160,7 @@ public class ColorPickerWidget extends PressableWidget {
 		int y = this.getY();
 		int width = this.getWidth();
 		int height = this.getHeight();
-		this.allowTransparency = true;
+		this.allowTransparency = true; // TODO - remove test stuff here
 		this.includePresets = true;
 //		this.setHeight(86); // no presets or alpha
 //		this.setHeight(96); // no presets, with alpha
@@ -187,7 +169,6 @@ public class ColorPickerWidget extends PressableWidget {
 
 		int presetPadding = 2;
 		int presetsPerLine = 10;
-//		int presetLines = this.presetWidgets.isEmpty() ? 2 : MathHelper.ceil((float) this.presetWidgets.size() / presetsPerLine);
 		int presetLines = MathHelper.ceil((float) this.presetsContainerWidget.getPresetSize() / presetsPerLine);
 		int presetSize = ((width - presetPadding) / (presetsPerLine)) - presetPadding;
 
@@ -204,25 +185,6 @@ public class ColorPickerWidget extends PressableWidget {
 		int alphaY = hueY + (this.allowTransparency ? hueHeight + 2 : 0);
 
 		int presetY = y + mainAreaHeight + presetPadding;
-		int presetComponentHeight = presetAreaHeight;
-
-		// old stuff
-//		int presetPadding = 2;
-//		int presetSize = (int) (height * (allowTransparency ? 0.136 : 0.154));
-//
-//		// Any numbers which are used to determine the position of another component should be its own variable
-//		int previewX = x + 2;
-//		int previewY = y + 2;
-//		int previewWidth = (int) (width / 3.5);
-//		int previewHeight = MathHelper.ceil(height * (allowTransparency ? 0.44 : 0.5));
-//
-//		int hueY = previewY + previewHeight + 2;
-//		int hueHeight = MathHelper.ceil(height * (allowTransparency ? 0.085 : 0.096));
-//
-//		int alphaY = hueY + (this.allowTransparency ? hueHeight + 2 : 0);
-//		int presetY = alphaY + hueHeight + presetPadding;
-//
-//		int presetComponentHeight = y + height - presetY; // allocate rest of height to presets
 
 		this.previewComponent.updatePos(previewX, previewY, previewWidth, previewHeight);
 
@@ -233,9 +195,10 @@ public class ColorPickerWidget extends PressableWidget {
 
 		this.alphaComponent.updatePos(previewX, alphaY, width - 4, hueHeight);
 
-		this.presetComponent.updatePos(previewX, presetY, width, presetComponentHeight); // 36 / 104 = ~0.35
-
-		this.presetsContainerWidget.setPosition(previewX, presetY, width, presetComponentHeight, presetSize, presetsPerLine);
+		this.presetsContainerWidget.setPosition(
+			previewX, presetY, width, presetAreaHeight,
+			presetSize, presetsPerLine
+		);
 
 		this.confirmButton.setPosition(
 			x + width - presetSize - presetPadding - 2,
@@ -250,26 +213,10 @@ public class ColorPickerWidget extends PressableWidget {
 		);
 	}
 
-//	private int getPresetSize() {
-//		int presetPadding = 2;
-//		int presetsPerLine = 10;
-//		return ((this.getWidth() - presetPadding) / (presetsPerLine)) - presetPadding;
-//		return 16;
-//		if(!this.presetWidgets.isEmpty()) {
-//			int presetPadding = 2;
-//			int presetsPerLine = 10;
-//			int presetLines = this.presetWidgets.size() % presetsPerLine;
-//			return (this.presetComponent.getHeight() - (presetPadding * presetLines)) / presetLines;
-//		} else {
-//			return 16;
-//		}
-//	}
-
 	private void drawColorPreview(DrawContext context, ColorPickerComponent component) {
 		if(this.alpha < 1f) {
 			// background tile
-//			context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, ALPHA_BIG_TEXTURE, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight());
-			drawTile(context, ALPHA_BIG_TEXTURE,
+			WidgetRenderUtil.drawPreciseTile(context, ALPHA_BIG_TEXTURE,
 				component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(),
 				4, 4
 			);
@@ -280,7 +227,7 @@ public class ColorPickerWidget extends PressableWidget {
 
 	private void drawSatLight(DrawContext context, ColorPickerComponent component) {
 		// white to current color's hue, left to right
-		sidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.WHITE, getRgbFromCurrentHue());
+		WidgetRenderUtil.drawSidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.WHITE, getRgbFromCurrentHue());
 
 		// transparent to black, top to bottom
 		context.fillGradient(component.getMinX(), component.getMinY(), component.getMaxX(), component.getMaxY(), 0x00000000, ColorUtil.BLACK);
@@ -302,7 +249,7 @@ public class ColorPickerWidget extends PressableWidget {
 		for (int color = 0; color < maxColors; color++) {
 			int colorMinX = x + (widthPerColor * color);
 			int colorWidth = color == maxColors - 1 ? maxX - colorMinX : widthPerColor;
-			sidewaysGradient(
+			WidgetRenderUtil.drawSidewaysGradient(
 				context,
 				colorMinX, y,
 				colorWidth, height,
@@ -318,40 +265,12 @@ public class ColorPickerWidget extends PressableWidget {
 		// background tile
 		context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, ALPHA_TEXTURE, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight());
 
-		// current color to transparent
-		sidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.TRANSPARENT, this.colorNoAlpha);
+		// transparent to current color
+		WidgetRenderUtil.drawSidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.TRANSPARENT, this.colorNoAlpha);
 
 		// thumb
 		drawThumb(context, component, 6, component.getHeight() + 1, this.color);
 	}
-
-//	private void drawPresets(DrawContext context, ColorPickerComponent component, int mouseX, int mouseY, float delta) {
-//		int maxY = this.getY() + this.getHeight();
-////		int presetSize = (int) (this.getHeight() / 6.5);
-////		int presetSize = (int) (height * (allowTransparency ? 0.138 : 0.154));
-//		int presetSize = this.getPresetSize();
-//		int paddedSize = presetSize + 2; // presetPadding = 2
-//		// Mostly dynamic, but probably not perfect - am not too worried about it though
-//		int presetsPerLine = component.getWidth() / (paddedSize);
-//
-//		// Render each preset widget in a grid, left to right, top to bottom
-//		int presetX = component.getMinX();
-//		int presetY = component.getMinY();
-//		int renderedPresets = 0;
-//		for (ColorPresetWidget preset : this.presetWidgets) {
-//			preset.setPosition(presetX, presetY, presetSize);
-//			preset.renderWidget(context, mouseX, mouseY, delta);
-//
-//			presetX += paddedSize;
-//			renderedPresets++;
-//			if(renderedPresets % presetsPerLine != 0) continue;
-//
-//			presetY += paddedSize;
-//			int currentScaleY = presetY + paddedSize;
-//			if(currentScaleY > component.getMaxY() || currentScaleY > maxY) return; // prevent overflow
-//			presetX = component.getMinX();
-//		}
-//	}
 
 	private void drawThumb(DrawContext context, ColorPickerComponent component, int width, int height, int color) {
 		this.drawThumb(context, component, width, height, color, true);
@@ -367,7 +286,6 @@ public class ColorPickerWidget extends PressableWidget {
 				component.getThumbX() - halfWidth + 1, initY - halfHeight,
 				width - 1, height - 1
 			);
-//			drawTile(context, ALPHA_TEXTURE, component.getThumbX() - halfWidth + 1, initY - halfHeight, width - 1, height - 1, 1, 2);
 		}
 
 		context.fill(
@@ -376,99 +294,7 @@ public class ColorPickerWidget extends PressableWidget {
 			color
 		);
 
-		drawOutline(context, component.getThumbX() - halfWidth, initY - halfHeight - 1, width + 1, height + 1, Colors.WHITE);
-	}
-
-	private void drawOutline(DrawContext context, int x, int y, int width, int height, int color) {
-		context.fill(x, y, x + width, y + 1, color);
-		context.fill(x, y, x + 1, y + height, color);
-		context.fill(x + width, y, x + width - 1, y + height, color);
-		context.fill(x, y + height, x + width, y + height - 1, color);
-	}
-
-	private void sidewaysGradient(DrawContext context, int x, int y, int width, int height, int startColor, int endColor) {
-		context.state.addSimpleElement(new SimpleGuiElementRenderState() {
-
-			@Override
-			public ScreenRect bounds() {
-				return new ScreenRect(x, y, width, height).transformEachVertex(context.getMatrices());
-			}
-
-			@Override
-			public void setupVertices(VertexConsumer vertices, float depth) {
-				Matrix3x2fStack matrix = context.getMatrices();
-				vertices.vertex(matrix, x, y, depth).color(startColor);
-				vertices.vertex(matrix, x, y + height, depth).color(startColor);
-				vertices.vertex(matrix, x + width, y + height, depth).color(endColor);
-				vertices.vertex(matrix, x + width, y, depth).color(endColor);
-			}
-
-			@Override
-			public RenderPipeline pipeline() {
-				return RenderPipelines.GUI;
-			}
-
-			@Override
-			public TextureSetup textureSetup() {
-				return TextureSetup.empty();
-			}
-
-			@Override
-			public @Nullable ScreenRect scissorArea() {
-				return null;
-			}
-		});
-	}
-
-	private void drawTile(DrawContext context, Identifier texture, int x, int y, int width, int height, float textureWidth, float textureHeight) {
-		Sprite sprite = MinecraftClient.getInstance().getGuiAtlasManager().getSprite(texture);
-		float tileWidth = width / textureWidth;
-		float tileHeight = height / textureHeight;
-		float u1 = sprite.getMinU();
-		float v1 = sprite.getMinV();
-		float u2 = sprite.getMaxU();
-		float v2 = sprite.getMaxV();
-		for (int iX = 0; iX < textureWidth; iX++) {
-			float tileX = x + (tileWidth * iX);
-			for (int iY = 0; iY < textureHeight; iY++) {
-				float tileY = y + (tileHeight * iY);
-				drawTextureWithPrecisionAndAccuracyEvenDonkeyKongWouldBeProudOf(context, sprite.getAtlasId(), tileX, tileY, tileWidth, tileHeight, u1, v1, u2, v2, ColorUtil.WHITE);
-			}
-		}
-	}
-
-	// am i mad?
-	private void drawTextureWithPrecisionAndAccuracyEvenDonkeyKongWouldBeProudOf(DrawContext context, Identifier sprite, float x, float y, float width, float height, float u1, float v1, float u2, float v2, int color) {
-		context.state.addSimpleElement(new SimpleGuiElementRenderState() {
-			@Override
-			public ScreenRect bounds() {
-				return new ScreenRect((int) x, (int) y, (int) width, (int) height).transformEachVertex(context.getMatrices());
-			}
-
-			@Override
-			public void setupVertices(VertexConsumer vertices, float depth) {
-				Matrix3x2fStack matrix = context.getMatrices();
-				vertices.vertex(matrix, x, y, depth).texture(u1, v1).color(color);
-				vertices.vertex(matrix, x, y + height, depth).texture(u1, v2).color(color);
-				vertices.vertex(matrix, x + width, y + height, depth).texture(u2, v2).color(color);
-				vertices.vertex(matrix, x + width, y, depth).texture(u2, v1).color(color);
-			}
-
-			@Override
-			public RenderPipeline pipeline() {
-				return RenderPipelines.GUI_TEXTURED;
-			}
-
-			@Override
-			public TextureSetup textureSetup() {
-				return TextureSetup.withoutGlTexture(MinecraftClient.getInstance().getTextureManager().getTexture(sprite).getGlTextureView());
-			}
-
-			@Override
-			public @Nullable ScreenRect scissorArea() {
-				return null;
-			}
-		});
+		WidgetRenderUtil.drawOutline(context, component.getThumbX() - halfWidth, initY - halfHeight - 1, width + 1, height + 1, Colors.WHITE);
 	}
 
 	@Override
@@ -529,9 +355,6 @@ public class ColorPickerWidget extends PressableWidget {
 		if(!this.allowWidgetClick()) return;
 
 		this.anyWidgetDown = this.presetsContainerWidget.tryClickingPresets(mouseX, mouseY);
-//		if(this.presetsContainerWidget.tryClickingPresets(mouseX, mouseY)) {
-//			this.anyWidgetDown = true;
-//		}
 	}
 
 	// It's possible for the user to continue clicking widgets/components after the color picker has closed
@@ -661,24 +484,6 @@ public class ColorPickerWidget extends PressableWidget {
 
 	public void setPresets(boolean includeDefaultPresets, List<Integer> addedPresets) {
 		this.presetsContainerWidget.createPresets(includeDefaultPresets, addedPresets);
-
-		if (includeDefaultPresets) {
-//			this.presetWidgets.addAll(ColorPresetWidget.createDefaultPresets(this));
-//			if(this.allowTransparency) {
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0x00000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0x33000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0x55000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0x77000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0x99000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0xAA000000));
-//				this.presetWidgets.add(ColorPresetWidget.fromColor(this, 0xCC000000));
-//			}
-		}
-
-		if (addedPresets.isEmpty()) return;
-		for (int preset : addedPresets) {
-//			this.presetWidgets.add(ColorPresetWidget.fromColor(this, preset));
-		}
 	}
 
 	// TODO - move into builder
