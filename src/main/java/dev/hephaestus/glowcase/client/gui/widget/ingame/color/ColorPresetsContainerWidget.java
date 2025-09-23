@@ -1,6 +1,5 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
-import dev.hephaestus.glowcase.client.util.ColorUtil;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.PressableWidget;
@@ -26,19 +25,19 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 	public int presetSize = 16;
 	public int presetPadding = 2;
 	public int presetsPerLine = 10;
+	public boolean allowAlpha;
 	private BiConsumer<Integer, @Nullable Formatting> presetListener;
 
 	public ColorPresetsContainerWidget(int x, int y, int width, int height, ColorPickerWidget colorPickerWidget) {
 		super(x, y, width, height, Text.of(""));
 		this.colorPickerWidget = colorPickerWidget;
+		this.allowAlpha = colorPickerWidget.allowAlpha();
 	}
 
 	public void createPresets(boolean includeDefaultPresets, List<Integer> addedPresets) {
 		if(includeDefaultPresets) {
 			ColorPresetWidget.addDefaultWidgets(this.presets, this.colorPickerWidget);
-
-			if(this.colorPickerWidget.allowTransparency)
-				ColorPresetWidget.addDefaultTransparentWidgets(this.transparentPresets, this.colorPickerWidget);
+			ColorPresetWidget.addDefaultTransparentWidgets(this.transparentPresets, this.colorPickerWidget);
 		}
 
 		if(addedPresets.isEmpty()) return;
@@ -50,6 +49,8 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 	@Override
 	protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
 		renderPresetList(context, this.presets, this.getY(), mouseX, mouseY, delta);
+
+		if(!this.allowAlpha) return;
 		renderPresetList(context, this.transparentPresets, this.getY() + (this.presetSize + this.presetPadding) * 2, mouseX, mouseY, delta);
 	}
 
@@ -94,6 +95,7 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 			}
 		}
 
+		if(!this.allowAlpha) return false;
 		for (ColorPresetWidget preset : this.transparentPresets) {
 			if (preset.isMouseOver(mouseX, mouseY)) {
 				preset.onClick(mouseX, mouseY);
@@ -104,7 +106,7 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 	}
 
 	public int getPresetSize() {
-		return this.presets.size() + this.transparentPresets.size();
+		return this.presets.size() + (this.allowAlpha ? this.transparentPresets.size() : 0);
 	}
 
 	public void setPosition(int x, int y, int width, int height, int presetScale, int presetsPerLine) {
@@ -125,6 +127,10 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 
 	public void setPresetsPerLine(int presetsPerLine) {
 		this.presetsPerLine = presetsPerLine;
+	}
+
+	public void setAllowAlpha(boolean allowAlpha) {
+		this.allowAlpha = allowAlpha;
 	}
 
 	@Override

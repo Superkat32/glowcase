@@ -1,5 +1,6 @@
 package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
+import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import eu.pb4.placeholders.api.parsers.tag.TagRegistry;
@@ -41,7 +42,7 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 		}).dimensions(buttonX, buttonY, buttonSize, buttonSize).build();
 
 		buttonX += buttonSize + buttonPadding;
-		//not using the actual obfuscated formatting here because the movement can be annoying
+		// not using the actual obfuscated formatting here because the movement can be annoying
 		ButtonWidget obfuscateText = ButtonWidget.builder(Text.literal("@"), action -> {
 			insertTag(TagRegistry.SAFE.getTag("obfuscated"), true);
 		}).dimensions(buttonX, buttonY, buttonSize, buttonSize).build();
@@ -49,23 +50,7 @@ public abstract class TextEditorScreen extends GlowcaseScreen implements ColorPi
 		buttonX += buttonSize + buttonPadding; // + 4? (only works on padding of 2)
 		this.colorText = ButtonWidget.builder(Text.literal("\uD83D\uDD8C"), action -> {
 			ColorPickerWidget colorPickerWidget = colorPickerWidget();
-			colorPickerWidget.setPosition(216, 10);
-			colorPickerWidget.setTargetElement(this.colorText);
-			colorPickerWidget.setOnAccept(picker -> {
-				picker.insertColor(picker.getCurrentColor());
-				picker.toggle(false);
-			});
-			colorPickerWidget.setOnCancel(picker -> picker.toggle(false));
-			colorPickerWidget.setPresetListener((color, formatting) -> {
-				if(formatting != null) {
-					insertFormattingTag(formatting);
-				} else {
-					insertHexTag(ColorUtil.getHexCode(color));
-				}
-				this.toggleColorPicker(false);
-			});
-			colorPickerWidget.setChangeListener(null);
-			toggleColorPicker(!colorPickerWidget.active);
+			colorPickerWidget.targetWidget(this, this.colorText, colorPickerWidget.getCurrentColor());
 		}).dimensions(buttonX, buttonY, buttonSize, buttonSize).build();
 
 		widgets = new ButtonWidget[]{

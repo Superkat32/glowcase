@@ -1,4 +1,4 @@
-package dev.hephaestus.glowcase.client.gui.screen.ingame;
+package dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces;
 
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import net.minecraft.util.Formatting;

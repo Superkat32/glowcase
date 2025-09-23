@@ -2,8 +2,8 @@ package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import com.google.common.primitives.Floats;
 import dev.hephaestus.glowcase.block.entity.TextBlockEntity;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
-import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
 import eu.pb4.placeholders.api.parsers.tag.TagRegistry;
 import net.minecraft.client.MinecraftClient;
@@ -37,7 +37,6 @@ public class TextBlockEditScreen extends TextEditorScreen {
 	private ButtonWidget changeAlignment;
 	private TextFieldWidget colorEntryWidget;
 	private TextFieldWidget backgroundColorEntryWidget;
-	private int prevColorEntry; // used for color picker cancel button
 	private ButtonWidget zOffsetToggle;
 	private CheckboxWidget shadowToggle;
 
@@ -95,35 +94,22 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			})
 			.pos(middle - 90 + innerPadding, 20 + innerPadding).build();
 
-		this.colorEntryWidget = new TextFieldWidget(this.client.textRenderer, middle + 70 + innerPadding * 2, 0, 64, 20, Text.empty());
-		this.colorEntryWidget.setTooltip(Tooltip.of(Text.translatable("gui.glowcase.color")));
-		this.colorEntryWidget.setText(ColorUtil.toAlphaHex(this.textBlockEntity.color));
-		this.colorEntryWidget.setChangedListener(string -> {
-			ColorUtil.parse(this.colorEntryWidget.getText(), this.textBlockEntity.color).ifSuccess(newColor -> {
-				// TODO - alpha slider limits to apply for this
-				final int color = (Math.max(newColor >>> 24, 0x1A) << 24) | (newColor & ColorUtil.COLOR_MASK);
+		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
+		this.colorPickerWidget.toggle(false); // start deactivated
 
-				this.textBlockEntity.color = color;
-				// make sure it doesn't update from the color picker updating the text
-				if (this.colorEntryWidget.isFocused()) {
-					this.colorPickerWidget.setColor(color);
-				}
-				this.textBlockEntity.renderDirty = true;
-			});
-		});
+		this.colorEntryWidget = ColorFieldWidget.Builder
+			.create(this, middle + 70 + innerPadding * 2, 0, this.textBlockEntity::getColor, this.textBlockEntity::setColor)
+			.tooltip(Text.translatable("gui.glowcase.color"))
+			.transparency(true, 0.11f)
+			.colorPicker(this, this.colorPickerWidget)
+			.build();
 
-		this.backgroundColorEntryWidget = new TextFieldWidget(this.client.textRenderer, middle + 136 + innerPadding * 2, 0, 64, 20, Text.empty());
-		this.backgroundColorEntryWidget.setTooltip(Tooltip.of(Text.translatable("gui.glowcase.background_color")));
-		this.backgroundColorEntryWidget.setText(ColorUtil.toAlphaHex(this.textBlockEntity.backgroundColor));
-		this.backgroundColorEntryWidget.setChangedListener(string -> {
-			ColorUtil.parse(string, this.textBlockEntity.backgroundColor).ifSuccess(newColor -> {
-				this.textBlockEntity.backgroundColor = newColor;
-				if (this.colorEntryWidget.isFocused()) {
-					this.colorPickerWidget.setColor(newColor);
-				}
-				this.textBlockEntity.renderDirty = true;
-			});
-		});
+		this.backgroundColorEntryWidget = ColorFieldWidget.Builder
+			.create(this, middle + 136 + innerPadding * 2, 0, this.textBlockEntity::getBackgroundColor, this.textBlockEntity::setBackgroundColor)
+			.tooltip(Text.translatable("gui.glowcase.background_color"))
+			.transparency(true)
+			.colorPicker(this, this.colorPickerWidget)
+			.build();
 
 		this.zOffsetToggle = ButtonWidget.builder(Text.literal(this.textBlockEntity.zOffset.name()), action -> {
 			switch (textBlockEntity.zOffset) {
@@ -135,9 +121,6 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 			this.zOffsetToggle.setMessage(Text.literal(this.textBlockEntity.zOffset.name()));
 		}).dimensions(middle + 2, 20 + innerPadding, 72, 20).build();
-
-		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
-		this.colorPickerWidget.toggle(false); // start deactivated
 
 		this.viewDistanceField = new TextFieldWidget(this.client.textRenderer, middle - 203, 20 + innerPadding, 83 + innerPadding, 20, Text.empty());
 		this.viewDistanceField.setText(String.valueOf(this.textBlockEntity.viewDistance));
@@ -152,7 +135,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			.dimensions(middle - 115 + innerPadding + 5, 20 + innerPadding, 20, 20).build();
 		this.viewDistanceHelpButton.setTooltip(Tooltip.of(Text.translatable("gui.glowcase.screen.text_edit.view_distance")));
 
-		this.addDrawableChild(colorPickerWidget);
+		this.addPriorityWidget(this.colorPickerWidget);
 		this.addDrawableChild(increaseSize);
 		this.addDrawableChild(decreaseSize);
 		this.addDrawableChild(this.changeAlignment);
@@ -199,61 +182,62 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		if (this.client != null) {
-			super.render(context, mouseX, mouseY, delta);
+		if(this.client == null) return;
 
-			context.getMatrices().pushMatrix();
-			context.getMatrices().translate(0, 40 + 2 * this.width / 100F);
-			for (int i = 0; i < this.textBlockEntity.lines.size(); ++i) {
-				var text = this.currentRow == i ? Text.literal(this.textBlockEntity.getRawLine(i)) : this.textBlockEntity.lines.get(i);
+		super.render(context, mouseX, mouseY, delta);
 
-				int lineWidth = this.textRenderer.getWidth(text);
-				switch (this.textBlockEntity.textAlignment) {
-					case LEFT -> context.drawTextWithShadow(client.textRenderer, text, this.width / 10, i * 12, this.textBlockEntity.color);
-					case CENTER, CENTER_LEFT, CENTER_RIGHT -> context.drawTextWithShadow(client.textRenderer, text, this.width / 2 - lineWidth / 2, i * 12, this.textBlockEntity.color);
-					case RIGHT -> context.drawTextWithShadow(client.textRenderer, text, this.width - this.width / 10 - lineWidth, i * 12, this.textBlockEntity.color);
-				}
+		context.getMatrices().pushMatrix();
+		context.getMatrices().translate(0, 40 + 2 * this.width / 100F);
+		for (int i = 0; i < this.textBlockEntity.lines.size(); ++i) {
+			var text = this.currentRow == i ? Text.literal(this.textBlockEntity.getRawLine(i)) : this.textBlockEntity.lines.get(i);
+
+			int lineWidth = this.textRenderer.getWidth(text);
+			switch (this.textBlockEntity.textAlignment) {
+				case LEFT -> context.drawTextWithShadow(client.textRenderer, text, this.width / 10, i * 12, this.textBlockEntity.color);
+				case CENTER, CENTER_LEFT, CENTER_RIGHT -> context.drawTextWithShadow(client.textRenderer, text, this.width / 2 - lineWidth / 2, i * 12, this.textBlockEntity.color);
+				case RIGHT -> context.drawTextWithShadow(client.textRenderer, text, this.width - this.width / 10 - lineWidth, i * 12, this.textBlockEntity.color);
 			}
-
-			int caretStart = this.selectionManager.getSelectionStart();
-			int caretEnd = this.selectionManager.getSelectionEnd();
-
-			if (caretStart >= 0) {
-				String line = this.textBlockEntity.getRawLine(this.currentRow);
-				int selectionStart = MathHelper.clamp(Math.min(caretStart, caretEnd), 0, line.length());
-				int selectionEnd = MathHelper.clamp(Math.max(caretStart, caretEnd), 0, line.length());
-
-				String preSelection = line.substring(0, MathHelper.clamp(line.length(), 0, selectionStart));
-				int startX = this.client.textRenderer.getWidth(preSelection);
-
-				float push = switch (this.textBlockEntity.textAlignment) {
-					case LEFT -> this.width / 10F;
-					case CENTER, CENTER_LEFT, CENTER_RIGHT -> this.width / 2F - this.textRenderer.getWidth(line) / 2F;
-					case RIGHT -> this.width - this.width / 10F - this.textRenderer.getWidth(line);
-				};
-
-				startX += (int) push;
-
-
-				int caretStartY = this.currentRow * 12;
-				if (this.ticksSinceOpened / 6 % 2 == 0 && !this.isFocusedTextActive()) {
-					if (selectionStart < line.length()) {
-						context.fill(startX, caretStartY, startX + 1, caretStartY + 9, 0xCCFFFFFF);
-					} else {
-						context.drawText(client.textRenderer, "_", startX, this.currentRow * 12, 0xFFFFFFFF, false);
-					}
-				}
-
-				if (caretStart != caretEnd) {
-					int endX = startX + this.client.textRenderer.getWidth(line.substring(selectionStart, selectionEnd));
-					context.drawSelection(startX, caretStartY, endX, caretStartY + 9);
-				}
-			}
-
-			context.getMatrices().popMatrix();
-			context.drawTextWithShadow(client.textRenderer, Text.translatable("gui.glowcase.scale_value", this.textBlockEntity.scale), width / 2 - 203, 7, 0xFFFFFFFF);
-			colorPickerWidget.render(context, mouseX, mouseY, delta);
 		}
+
+		int caretStart = this.selectionManager.getSelectionStart();
+		int caretEnd = this.selectionManager.getSelectionEnd();
+
+		if (caretStart >= 0) {
+			String line = this.textBlockEntity.getRawLine(this.currentRow);
+			int selectionStart = MathHelper.clamp(Math.min(caretStart, caretEnd), 0, line.length());
+			int selectionEnd = MathHelper.clamp(Math.max(caretStart, caretEnd), 0, line.length());
+
+			String preSelection = line.substring(0, MathHelper.clamp(line.length(), 0, selectionStart));
+			int startX = this.client.textRenderer.getWidth(preSelection);
+
+			float push = switch (this.textBlockEntity.textAlignment) {
+				case LEFT -> this.width / 10F;
+				case CENTER, CENTER_LEFT, CENTER_RIGHT -> this.width / 2F - this.textRenderer.getWidth(line) / 2F;
+				case RIGHT -> this.width - this.width / 10F - this.textRenderer.getWidth(line);
+			};
+
+			startX += (int) push;
+
+
+			int caretStartY = this.currentRow * 12;
+			if (this.ticksSinceOpened / 6 % 2 == 0 && !this.isFocusedTextActive()) {
+				if (selectionStart < line.length()) {
+					context.fill(startX, caretStartY, startX + 1, caretStartY + 9, 0xCCFFFFFF);
+				} else {
+					context.drawText(client.textRenderer, "_", startX, this.currentRow * 12, 0xFFFFFFFF, false);
+				}
+			}
+
+			if (caretStart != caretEnd) {
+				int endX = startX + this.client.textRenderer.getWidth(line.substring(selectionStart, selectionEnd));
+				context.drawSelection(startX, caretStartY, endX, caretStartY + 9);
+			}
+		}
+
+		context.getMatrices().popMatrix();
+		context.drawTextWithShadow(client.textRenderer, Text.translatable("gui.glowcase.scale_value", this.textBlockEntity.scale), width / 2 - 203, 7, 0xFFFFFFFF);
+
+		this.renderPriorityWidgets(context, mouseX, mouseY, delta);
 	}
 
 	@Override
@@ -388,56 +372,26 @@ public class TextBlockEditScreen extends TextEditorScreen {
 		this.textBlockEntity.renderDirty = true;
 	}
 
-	private void colorListenerClicked(TextFieldWidget textWidget) {
-		this.colorPickerWidget.setPosition(Math.min(textWidget.getX(), width - colorPickerWidget.getWidth() - 50), textWidget.getY() + textWidget.getHeight());
-		this.colorPickerWidget.setTargetElement(textWidget);
-		this.colorPickerWidget.setOnAccept(null);
-		this.colorPickerWidget.setOnCancel(picker -> {
-			picker.setColor(this.prevColorEntry);
-		});
-		this.colorPickerWidget.setChangeListener(color -> {
-			textWidget.setText(ColorUtil.toAlphaHex(color));
-		});
-		this.colorPickerWidget.setPresetListener((color, formatting) -> {
-			this.colorPickerWidget.setColor(color);
-		});
-		ColorUtil.parse(textWidget.getText(), ColorUtil.WHITE).ifSuccess(color -> {
-			this.prevColorEntry = color;
-			this.colorPickerWidget.setColor(color);
-		}).ifError(textColorError -> this.prevColorEntry = this.colorPickerWidget.getCurrentColor());
-		toggleColorPicker(true);
-	}
-
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		int topOffset = (int) (40 + 2 * this.width / 100F);
+
+		if(this.mouseClickedPriorityWidgets(mouseX, mouseY, button)) {
+			return true; // don't click anything else
+		} else if (this.colorPickerWidget.activeAndVisible() &&
+			!this.colorPickerWidget.targetElement.isMouseOver(mouseX, mouseY)
+		) { // don't disable color picker if its target element was clicked
+			this.toggleColorPicker(false);
+		}
 
 		for (final var text : textWidgets) {
 			if (!text.mouseClicked(mouseX, mouseY, button)) {
 				continue;
 			}
 			this.setFocused(text);
-			if (this.colorListeners.contains(text)) {
-				this.colorListenerClicked(text);
-			}
-			if (this.colorPickerWidget.targetElement != text || !this.colorPickerWidget.isMouseOver(mouseX, mouseY)) {
-				text.setFocused(false);
-			}
 			break;
 		}
 
-		if (colorPickerWidget.active && colorPickerWidget.visible) {
-			if (colorPickerWidget.isMouseOver(mouseX, mouseY)) {
-				colorPickerWidget.mouseClicked(mouseX, mouseY, button);
-				this.setFocused(colorPickerWidget);
-				this.setDragging(true);
-				return true;
-			} else {
-				if (!this.colorPickerWidget.targetElement.isMouseOver(mouseX, mouseY)) {
-					toggleColorPicker(false);
-				}
-			}
-		}
 		if (mouseY > topOffset) {
 			this.currentRow = MathHelper.clamp((int) (mouseY - topOffset) / 12, 0, this.textBlockEntity.lines.size() - 1);
 			this.setFocused(null);

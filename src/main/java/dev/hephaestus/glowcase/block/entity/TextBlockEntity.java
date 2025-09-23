@@ -111,6 +111,24 @@ public class TextBlockEntity extends GlowcaseBlockEntity {
 		}
 	}
 
+	public int getColor() {
+		return this.color;
+	}
+
+	public void setColor(int color) {
+		this.color = color;
+		this.renderDirty = true;
+	}
+
+	public int getBackgroundColor() {
+		return this.backgroundColor;
+	}
+
+	public void setBackgroundColor(int color) {
+		this.backgroundColor = color;
+		this.renderDirty = true;
+	}
+
 	public enum TextAlignment implements StringIdentifiable {
 		LEFT, CENTER, CENTER_LEFT, CENTER_RIGHT, RIGHT;
 

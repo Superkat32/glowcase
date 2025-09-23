@@ -101,6 +101,7 @@ public class SpriteBlockEditScreen extends GlowcaseScreen {
 		validSprites = allValidSprites(resourceManager);
 
 		suggestionWidget = SuggestionListWidget.forTextFieldWithStaticSuggestions(spriteWidget, client.textRenderer, validSprites, Function.identity(), this);
+		this.addPriorityWidget(this.suggestionWidget);
 	}
 
 	/**
@@ -145,13 +146,19 @@ public class SpriteBlockEditScreen extends GlowcaseScreen {
 		}*/
 
 		// render the list over everything
-		suggestionWidget.renderWidget(context, mouseX, mouseY, delta);
+//		suggestionWidget.renderWidget(context, mouseX, mouseY, delta);
+		this.renderPriorityWidgets(context, mouseX, mouseY, delta);
 	}
 
 	@Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
-            return suggestionWidget.mouseClicked(mouseX, mouseY, button);
+//		if(spriteWidget.isFocused() && this.mouseClickedPriorityWidgets(mouseX, mouseY, button)) {
+//			this.setFocused(spriteWidget);
+//			return true;
+//        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
+//            return suggestionWidget.mouseClicked(mouseX, mouseY, button);
+		if(spriteWidget.isFocused() && this.mouseClickedPriorityWidgets(mouseX, mouseY, button, false)) {
+			return true;
         } else {
             suggestionWidget.updateSuggestions(new ArrayList<>(), "", this);
         }
@@ -161,9 +168,9 @@ public class SpriteBlockEditScreen extends GlowcaseScreen {
 
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-		if (suggestionWidget.draggingScrollbar) {
-			if (suggestionWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY))
-				return true;
+		if (suggestionWidget.draggingScrollbar && this.mouseDraggedPriorityWidgets(mouseX, mouseY, button, deltaX, deltaY)) {
+//			if (suggestionWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY))
+			return true;
 		}
 
 		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
@@ -171,8 +178,9 @@ public class SpriteBlockEditScreen extends GlowcaseScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
-            suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+		if(spriteWidget.isFocused() && this.mouseScrolledPriorityWidgets(mouseX, mouseY, horizontalAmount, verticalAmount)) {
+//        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
+//            suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
             return true;
         }
 
@@ -181,7 +189,8 @@ public class SpriteBlockEditScreen extends GlowcaseScreen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (suggestionWidget.keyPressed(keyCode, scanCode, modifiers)) {
+		if(this.keyPressedPriorityWidgets(keyCode, scanCode, modifiers)) {
+//		if (suggestionWidget.keyPressed(keyCode, scanCode, modifiers)) {
 			return true;
 		}
 		return super.keyPressed(keyCode, scanCode, modifiers);

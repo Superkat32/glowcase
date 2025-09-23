@@ -1,7 +1,7 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
 import dev.hephaestus.glowcase.Glowcase;
-import dev.hephaestus.glowcase.client.gui.screen.ingame.ColorPickerIncludedScreen;
+import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
@@ -10,7 +10,9 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
@@ -38,6 +40,11 @@ import java.util.function.Consumer;
  * @see ColorPresetWidget
  */
 public class ColorPickerWidget extends PressableWidget {
+	public static final int DEFAULT_WIDTH = 182;
+	public static final int DEFAULT_HEIGHT = 104; // presets, no alpha
+	public static final int DEFAULT_HEIGHT_ALPHA = 134; // presets & alpha
+	public static final int DEFAULT_HEIGHT_ALPHA_NO_PRESETS = 96; // no presets, with alpha
+	public static final int DEFAULT_HEIGHT_NO_PRESETS_OR_ALPHA = 86; // no presets or alpha
 	private static final Identifier BACKGROUND_TEXTURE = Identifier.ofVanilla("textures/gui/inworld_menu_list_background.png");
 	private static final Identifier CONFIRM_TEXTURE = Identifier.ofVanilla("pending_invite/accept");
 	private static final Identifier CONFIRM_HIGHLIGHTED_TEXTURE = Identifier.ofVanilla("pending_invite/accept_highlighted");
@@ -50,21 +57,23 @@ public class ColorPickerWidget extends PressableWidget {
 	public Element targetElement;
 	protected int color = ColorUtil.RED; // cached color int for rendering & getting the color as int
 	protected int colorNoAlpha = ColorUtil.RED; // cached color int with no transparency for rendering
+	protected int prevColorEntry = ColorUtil.RED; // prev color for undoing
 	protected IconButtonWidget confirmButton;
 	protected IconButtonWidget cancelButton;
 
-	private boolean mouseDown = false;
-	public boolean anyWidgetDown = false;
-	private ColorPickerComponent currentComponent = null;
-	private final List<ColorPickerComponent> components;
-	private final ColorPickerComponent previewComponent = new ColorPickerComponent();
-	private final ColorPickerComponent hueComponent = new ColorPickerComponent(this::setHue);
-	private final ColorPickerComponent satLightComponent = new ColorPickerComponent(this::setSatLat);
-	private final ColorPickerComponent alphaComponent = new ColorPickerComponent(this::setAlpha);
+	protected boolean mouseDown = false; // equal to mouseDragging
+	protected boolean anyWidgetDown = false; // prevent widgets from being dragged after deactivated
+	protected ColorPickerComponent currentComponent = null; // prevent components from being dragged after deactivated
+	protected final List<ColorPickerComponent> components;
+	protected final ColorPickerComponent previewComponent = new ColorPickerComponent();
+	protected final ColorPickerComponent hueComponent = new ColorPickerComponent(this::setHue);
+	protected final ColorPickerComponent satLightComponent = new ColorPickerComponent(this::setSatLat);
+	protected final ColorPickerComponent alphaComponent = new ColorPickerComponent(this::setAlpha);
 
 	public boolean includePresets = true;
 	protected ColorPresetsContainerWidget presetsContainerWidget;
-	public boolean allowTransparency = false;
+	public boolean allowAlpha = false;
+	protected float minAlpha = 0f;
 
 	private Consumer<Integer> changeListener;
 	private BiConsumer<Integer, @Nullable Formatting> presetListener;
@@ -121,12 +130,11 @@ public class ColorPickerWidget extends PressableWidget {
 			WidgetRenderUtil.drawOutline(context, x, y, width, height, ColorUtil.WHITE);
 		}
 
-
 		// draw components
 		drawColorPreview(context, this.previewComponent);
-		drawSatLight(context, this.satLightComponent);
 		drawHueBar(context, this.hueComponent);
-		if(this.allowTransparency) {
+		drawSatLight(context, this.satLightComponent);
+		if(this.allowAlpha) {
 			drawAlphaBar(context, this.alphaComponent);
 		}
 		if (this.includePresets) {
@@ -154,18 +162,12 @@ public class ColorPickerWidget extends PressableWidget {
 	// - presetSize = 16
 	// - presetLines = 2
 
-	// I really can't be bothered to make this perfectly perfect, so this will have to do
+	// I(Superkat32) really can't be bothered to make this perfectly perfect, so this will have to do
 	public void updatePositions() {
 		int x = this.getX();
 		int y = this.getY();
 		int width = this.getWidth();
 		int height = this.getHeight();
-		this.allowTransparency = true; // TODO - remove test stuff here
-		this.includePresets = true;
-//		this.setHeight(86); // no presets or alpha
-//		this.setHeight(96); // no presets, with alpha
-//		this.setHeight(116); // presets, no alpha
-		this.setHeight(134); // presets & alpha
 
 		int presetPadding = 2;
 		int presetsPerLine = 10;
@@ -178,11 +180,11 @@ public class ColorPickerWidget extends PressableWidget {
 		int previewX = x + 2;
 		int previewY = y + 2;
 		int previewWidth = (int) (width / 3.5);
-		int previewHeight = (int) (mainAreaHeight * (this.allowTransparency ? 0.667 : 0.788));
+		int previewHeight = (int) (mainAreaHeight * (this.allowAlpha ? 0.667 : 0.788));
 
 		int hueY = previewY + previewHeight + 2;
-		int hueHeight = (int) (mainAreaHeight * (this.allowTransparency ? 0.129 : 0.152));
-		int alphaY = hueY + (this.allowTransparency ? hueHeight + 2 : 0);
+		int hueHeight = (int) (mainAreaHeight * (this.allowAlpha ? 0.129 : 0.152));
+		int alphaY = hueY + (this.allowAlpha ? hueHeight + 2 : 0);
 
 		int presetY = y + mainAreaHeight + presetPadding;
 
@@ -211,6 +213,61 @@ public class ColorPickerWidget extends PressableWidget {
 			y + height - presetSize - 3,
 			presetSize, presetSize + 3
 		);
+	}
+
+	// Intended for text editing screens (e.g. the color picker formatting button from the text block)
+	public void targetWidget(Screen screen, ClickableWidget widget, int color) {
+		this.targetWidget(screen, widget, color, false, 0f, true, null);
+	}
+
+	// Intended for text/color field widgets (e.g. the text color/background color from the text block)
+	public void targetWidget(Screen screen, ClickableWidget widget, int color, boolean allowAlpha, float minAlpha, Consumer<Integer> onChange) {
+		this.targetWidget(screen, widget, color, allowAlpha, minAlpha, false, onChange);
+	}
+
+	public void targetWidget(
+		Screen screen, ClickableWidget widget, int color,
+		boolean allowAlpha, float minAlpha, boolean textEditorMode, Consumer<Integer> onChange
+	) {
+		int pickerWidth = DEFAULT_WIDTH;
+		// disallow picker to go beyond screen limits
+		int pickerX = Math.min((widget.getX() + widget.getWidth()) - pickerWidth, screen.width);
+		int pickerY = widget.getY() + widget.getHeight();
+		int pickerHeight = allowAlpha ? DEFAULT_HEIGHT_ALPHA : DEFAULT_HEIGHT;
+		this.setPosition(pickerX, pickerY);
+		this.setDimensions(pickerWidth, pickerHeight);
+		this.setAllowAlpha(allowAlpha);
+		this.setMinAlpha(minAlpha);
+
+		if(!allowAlpha) color = ColorUtil.transferAlpha(ColorUtil.WHITE, color); // remove alpha from color
+		this.setTargetElement(widget);
+		this.setColor(color);
+		this.prevColorEntry = color;
+
+		if(textEditorMode) { // intended for screen editing
+			this.setOnAccept(picker -> {
+				picker.insertColor(picker.getCurrentColor());
+				picker.toggle(false);
+			});
+			this.setOnCancel(picker -> picker.toggle(false));
+			this.setChangeListener(null);
+			this.setPresetListener((colorInt, formatting) -> {
+				if(formatting != null) this.screen.insertFormattingTag(formatting);
+				else this.screen.insertHexTag(ColorUtil.getHexCode(colorInt));
+				this.toggle(false);
+			});
+			this.toggle(!this.active);
+		} else { // intended for text/color field widget editing
+			this.setOnAccept(null);
+			this.setOnCancel(picker -> {
+				this.setColor(this.prevColorEntry);
+			});
+			this.setChangeListener(onChange);
+			this.setPresetListener((colorInt, formatting) -> {
+				this.setColor(colorInt);
+			});
+			this.toggle(true);
+		}
 	}
 
 	private void drawColorPreview(DrawContext context, ColorPickerComponent component) {
@@ -266,7 +323,8 @@ public class ColorPickerWidget extends PressableWidget {
 		context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, ALPHA_TEXTURE, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight());
 
 		// transparent to current color
-		WidgetRenderUtil.drawSidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.TRANSPARENT, this.colorNoAlpha);
+		int alphaColor = ColorHelper.withAlpha(this.minAlpha, this.colorNoAlpha);
+		WidgetRenderUtil.drawSidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), alphaColor, this.colorNoAlpha);
 
 		// thumb
 		drawThumb(context, component, 6, component.getHeight() + 1, this.color);
@@ -428,7 +486,7 @@ public class ColorPickerWidget extends PressableWidget {
 		this.hue = HSLA[0];
 		this.saturation = HSLA[1];
 		this.light = HSLA[2];
-		this.alpha = this.allowTransparency ? HSLA[3] : 1f;
+		this.alpha = this.allowAlpha ? HSLA[3] : 1f;
 	}
 
 	public void setHue(float hue) {
@@ -441,7 +499,11 @@ public class ColorPickerWidget extends PressableWidget {
 	}
 
 	public void setAlpha(float alpha) {
-		this.alpha = alpha;
+		if(this.minAlpha != 0f) {
+			this.alpha = (1f - this.minAlpha) * alpha + this.minAlpha;
+		} else {
+			this.alpha = alpha;
+		}
 	}
 
 	public void setColor(int color) {
@@ -453,7 +515,7 @@ public class ColorPickerWidget extends PressableWidget {
 	public void setColorFromHSLA() {
 		this.color = ColorUtil.HSBtoRGB(getHueFromThumb(), this.saturation, this.light);
 		this.colorNoAlpha = this.color;
-		if(this.allowTransparency) {
+		if(this.allowAlpha) {
 			this.color = ColorHelper.withAlpha(this.alpha, this.color);
 		}
 	}
@@ -478,15 +540,32 @@ public class ColorPickerWidget extends PressableWidget {
 		return ColorUtil.intToHSLA(this.color);
 	}
 
+	public boolean activeAndVisible() {
+		return this.active && this.visible;
+	}
+
+	//region Widget Related Getters & Setters
 	public void setTargetElement(Element element) {
 		this.targetElement = element;
+	}
+
+	public void setAllowAlpha(boolean allowAlpha) {
+		this.allowAlpha = allowAlpha;
+		this.presetsContainerWidget.setAllowAlpha(allowAlpha);
+	}
+
+	public boolean allowAlpha() {
+		return this.allowAlpha;
+	}
+
+	public void setMinAlpha(float minAlpha) {
+		this.minAlpha = minAlpha;
 	}
 
 	public void setPresets(boolean includeDefaultPresets, List<Integer> addedPresets) {
 		this.presetsContainerWidget.createPresets(includeDefaultPresets, addedPresets);
 	}
 
-	// TODO - move into builder
 	public void setIncludePresets(boolean shouldInclude) {
 		this.includePresets = shouldInclude;
 	}
@@ -510,6 +589,8 @@ public class ColorPickerWidget extends PressableWidget {
 	public BiConsumer<Integer, @Nullable Formatting> getPresetListener() {
 		return presetListener;
 	}
+
+	//endregion
 
 	@Override
 	public void appendClickableNarrations(NarrationMessageBuilder builder) {
