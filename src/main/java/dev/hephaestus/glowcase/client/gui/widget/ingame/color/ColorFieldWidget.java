@@ -24,7 +24,7 @@ public class ColorFieldWidget extends TextFieldWidget {
 
 	@Nullable
 	public final ColorPickerWidget colorPickerWidget;
-
+	public int pickerX, pickerY, pickerWidth, pickerHeight;
 	public boolean alphaEnabled;
 	public float minAlpha;
 
@@ -34,7 +34,8 @@ public class ColorFieldWidget extends TextFieldWidget {
 		Screen screen, int x, int y, int width, int height, Tooltip tooltip,
 		ColorGetter colorGetter, ColorSetter colorSetter,
 		boolean alphaEnabled, float minAlpha,
-		@Nullable ColorPickerWidget colorPickerWidget
+		@Nullable ColorPickerWidget colorPickerWidget,
+		int pickerX, int pickerY, int pickerWidth, int pickerHeight
 	) {
 		super(MinecraftClient.getInstance().textRenderer, x, y, width, height, Text.empty());
 		this.screen = screen;
@@ -46,6 +47,10 @@ public class ColorFieldWidget extends TextFieldWidget {
 		this.minAlpha = minAlpha;
 
 		this.colorPickerWidget = colorPickerWidget;
+		this.pickerX = pickerX;
+		this.pickerY = pickerY;
+		this.pickerWidth = pickerWidth;
+		this.pickerHeight = pickerHeight;
 
 		this.color = this.colorGetter.getCurrentColor();
 
@@ -53,7 +58,7 @@ public class ColorFieldWidget extends TextFieldWidget {
 		this.updateColorText();
 	}
 
-	// Own method because TextFieldWidget#onChanged() is final
+	// Use our own method because TextFieldWidget#onChanged() is final
 	public void onChange(String text) {
 		this.parseCurrentText();
 	}
@@ -63,7 +68,12 @@ public class ColorFieldWidget extends TextFieldWidget {
 	}
 
 	public void parseCurrentText() {
-		ColorUtil.parse(this.getText(), this.getColor()).ifSuccess(this::setColor);
+		ColorUtil.parse(this.getText(), this.getColor()).ifSuccess(colorInt -> {
+			setColor(colorInt);
+			if(this.isFocused() && this.colorPickerWidget != null && this.colorPickerWidget.activeAndVisible()) {
+				this.updateColorPicker();
+			}
+		});
 	}
 
 	@Override
@@ -76,7 +86,10 @@ public class ColorFieldWidget extends TextFieldWidget {
 
 	public void updateColorPicker() {
 		if(this.colorPickerWidget == null) return;
-		this.colorPickerWidget.targetWidget(this.screen, this, this.color, this.alphaEnabled, this.minAlpha, this::onColorPickerChange);
+		this.colorPickerWidget.targetWidget(
+			this, this.color, this.alphaEnabled, this.minAlpha, this::onColorPickerChange,
+			this.pickerX, pickerY, pickerWidth, pickerHeight
+		);
 
 	}
 
@@ -109,11 +122,12 @@ public class ColorFieldWidget extends TextFieldWidget {
 
 		private int width = DEFAULT_WIDTH;
 		private int height = DEFAULT_HEIGHT;
-		private Tooltip tooltip = null;
+		private Tooltip tooltip = Tooltip.of(Text.empty());
 
 		private ColorPickerWidget colorPickerWidget = null;
+		private int pickerX, pickerY, pickerWidth, pickerHeight;
 
-		private boolean alphaEnabled = false;
+		private boolean allowAlpha = false;
 		private float minAlpha = 0f;
 
 		public static Builder create(Screen screen, int x, int y, ColorGetter colorGetter, ColorSetter colorSetter) {
@@ -163,7 +177,7 @@ public class ColorFieldWidget extends TextFieldWidget {
 		}
 
 		public Builder transparency(boolean enabled, float minAlpha) {
-			this.alphaEnabled = enabled;
+			this.allowAlpha = enabled;
 			this.minAlpha = minAlpha;
 			if(enabled && this.width == DEFAULT_WIDTH) {
 				this.width = DEFAULT_TRANSPARENT_WIDTH;
@@ -171,8 +185,33 @@ public class ColorFieldWidget extends TextFieldWidget {
 			return this;
 		}
 
-		public Builder colorPicker(Screen screen, ColorPickerWidget colorPickerWidget) {
+		public Builder colorPicker(ColorPickerWidget colorPickerWidget) {
+			int pickerWidth = ColorPickerWidget.DEFAULT_WIDTH;
+			// disallow picker to go beyond screen limits
+			int pickerX = Math.min((this.x + this.width) - pickerWidth, this.screen.width);
+//			int pickerX = this.x + this.width - pickerWidth;
+			int pickerY = this.y + this.height;
+			return this.colorPicker(colorPickerWidget, pickerX, pickerY);
+		}
+
+		public Builder colorPicker(ColorPickerWidget colorPickerWidget, int pickerX, int pickerY) {
+			int pickerWidth = ColorPickerWidget.DEFAULT_WIDTH;
+			int pickerHeight = this.allowAlpha ? ColorPickerWidget.DEFAULT_HEIGHT_ALPHA : ColorPickerWidget.DEFAULT_HEIGHT;
+			return this.colorPicker(colorPickerWidget, pickerX, pickerY, pickerWidth, pickerHeight);
+		}
+
+		public Builder colorPicker(ColorPickerWidget colorPickerWidget, int pickerX, int pickerY, int pickerWidth, int pickerHeight) {
 			this.colorPickerWidget = colorPickerWidget;
+			this.pickerX = pickerX;
+			this.pickerY = pickerY;
+			this.pickerWidth = pickerWidth;
+			this.pickerHeight = pickerHeight;
+			return this;
+		}
+
+		public Builder offsetColorPicker(int pickerXOffset, int pickerYOffset) {
+			this.pickerX += pickerXOffset;
+			this.pickerY += pickerYOffset;
 			return this;
 		}
 
@@ -180,8 +219,8 @@ public class ColorFieldWidget extends TextFieldWidget {
 			return new ColorFieldWidget(
 				this.screen, this.x, this.y, this.width, this.height, this.tooltip,
 				this.colorGetter, this.colorSetter,
-				this.alphaEnabled, minAlpha,
-				this.colorPickerWidget
+				this.allowAlpha, minAlpha,
+				this.colorPickerWidget, this.pickerX, pickerY, pickerWidth, pickerHeight
 			);
 		}
 	}

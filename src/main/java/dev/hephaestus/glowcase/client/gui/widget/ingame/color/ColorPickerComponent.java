@@ -1,5 +1,8 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
 
+import dev.hephaestus.glowcase.client.util.ColorUtil;
+import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,8 +49,7 @@ public class ColorPickerComponent {
 	}
 
 	public boolean clicked(double mouseX, double mouseY) {
-		if(mouseY >= this.getMinY() && mouseY <= this.getMaxY()
-			&& mouseX >= this.getMinX() && mouseX <= this.getMaxX()) {
+		if(this.hovered(mouseX, mouseY)) {
 			this.mouseDown = true;
 		}
 
@@ -59,6 +61,11 @@ public class ColorPickerComponent {
 		}
 
 		return mouseDown;
+	}
+
+	public boolean hovered(double mouseX, double mouseY) {
+		return (mouseY >= this.getMinY() && mouseY <= this.getMaxY()
+			&& mouseX >= this.getMinX() && mouseX <= this.getMaxX());
 	}
 
 	public void setValuesFromMouse(double mouseX, double mouseY) {

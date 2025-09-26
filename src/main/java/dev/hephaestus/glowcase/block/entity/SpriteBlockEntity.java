@@ -72,4 +72,12 @@ public class SpriteBlockEntity extends GlowcaseBlockEntity {
 		this.rotation = rotation;
 		markDirty();
 	}
+
+	public int getColor() {
+		return this.color;
+	}
+
+	public void setColor(int color) {
+		this.color = color;
+	}
 }

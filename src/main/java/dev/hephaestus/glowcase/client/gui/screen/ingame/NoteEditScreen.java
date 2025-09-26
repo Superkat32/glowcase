@@ -184,8 +184,9 @@ public class NoteEditScreen extends TextEditorScreen {
 		}).dimensions(width / 2 + BG_WIDTH / 2 - (BG_WIDTH / 2 - 3), height / 2 + BG_HEIGHT / 2 + offset, BG_WIDTH / 2 - 3, 20).build();
 
 
-		this.colorPickerWidget = ColorPickerWidget.builder(this, 216, 10).size(182, 104).build();
-		this.colorPickerWidget.toggle(false); // start deactivated
+//		this.colorPickerWidget = ColorPickerWidget.builder(this, 216, 10).size(182, 104).build();
+//		this.colorPickerWidget.toggle(false); // start deactivated
+		this.colorPickerWidget = createColorPicker();
 
 		this.addDrawableChild(colorPickerWidget);
 
@@ -595,17 +596,12 @@ public class NoteEditScreen extends TextEditorScreen {
 	}
 
 	@Override
-	public ColorPickerWidget colorPickerWidget() {
+	public ColorPickerWidget getColorPicker() {
 		return colorPickerWidget;
 	}
 
 	@Override
-	public void toggleColorPicker(boolean active) {
-		colorPickerWidget.toggle(active);
-	}
-
-	@Override
-	SelectionManager getSelectionManager() {
+	public SelectionManager getSelectionManager() {
 		return selectionManager;
 	}
 }

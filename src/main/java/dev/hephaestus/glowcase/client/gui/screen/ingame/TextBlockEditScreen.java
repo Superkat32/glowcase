@@ -5,7 +5,6 @@ import dev.hephaestus.glowcase.block.entity.TextBlockEntity;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
-import eu.pb4.placeholders.api.parsers.tag.TagRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
@@ -94,21 +93,22 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			})
 			.pos(middle - 90 + innerPadding, 20 + innerPadding).build();
 
-		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
-		this.colorPickerWidget.toggle(false); // start deactivated
+//		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
+//		this.colorPickerWidget.toggle(false); // start deactivated
+		this.colorPickerWidget = createColorPicker();
 
 		this.colorEntryWidget = ColorFieldWidget.Builder
 			.create(this, middle + 70 + innerPadding * 2, 0, this.textBlockEntity::getColor, this.textBlockEntity::setColor)
 			.tooltip(Text.translatable("gui.glowcase.color"))
 			.transparency(true, 0.11f)
-			.colorPicker(this, this.colorPickerWidget)
+			.colorPicker(this.colorPickerWidget)
 			.build();
 
 		this.backgroundColorEntryWidget = ColorFieldWidget.Builder
 			.create(this, middle + 136 + innerPadding * 2, 0, this.textBlockEntity::getBackgroundColor, this.textBlockEntity::setBackgroundColor)
 			.tooltip(Text.translatable("gui.glowcase.background_color"))
 			.transparency(true)
-			.colorPicker(this, this.colorPickerWidget)
+			.colorPicker(this.colorPickerWidget)
 			.build();
 
 		this.zOffsetToggle = ButtonWidget.builder(Text.literal(this.textBlockEntity.zOffset.name()), action -> {
@@ -273,7 +273,7 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 			return true;
 		} else {
-			// Allow for color picker changing while holding shift for alt presets
+			// Allow for color picker changing while holding shift for alt. presets
 			if(!this.colorPickerWidget.active && keyCode != GLFW.GLFW_KEY_LEFT_SHIFT) {
 				setFocused(null);
 			}
@@ -307,28 +307,9 @@ public class TextBlockEditScreen extends TextEditorScreen {
 				deleteLine();
 				return true;
 			} else {
-
-				//formatting hotkeys
-				if (Screen.hasControlDown()) {
-					if (keyCode == GLFW.GLFW_KEY_B) {
-						insertTag(TagRegistry.SAFE.getTag("bold"), true);
-						return true;
-					} else if (keyCode == GLFW.GLFW_KEY_I) {
-						insertTag(TagRegistry.SAFE.getTag("italic"), true);
-						return true;
-					} else if (keyCode == GLFW.GLFW_KEY_U) {
-						insertTag(TagRegistry.SAFE.getTag("underline"), true);
-						return true;
-					} else if (keyCode == GLFW.GLFW_KEY_5 || keyCode == GLFW.GLFW_KEY_S) {
-						//There isn't a commonly agreed upon hotkey for strikethrough unlike the rest above
-						//apparently 5 is commonly used for strikethrough ¯\_(ツ)_/¯
-						//Google Docs and Microsoft Word have 5 in their hotkeys, while Discord has S in its hotkey
-						insertTag(TagRegistry.SAFE.getTag("strikethrough"), true);
-						return true;
-					} else if (keyCode == GLFW.GLFW_KEY_O) {
-						insertTag(TagRegistry.SAFE.getTag("obfuscated"), true);
-						return true;
-					}
+				// formatting hotkeys
+				if(this.formattingKeyPressed(keyCode, scanCode, modifiers)) {
+					return true; // don't press anything else
 				}
 
 				try {
@@ -446,17 +427,12 @@ public class TextBlockEditScreen extends TextEditorScreen {
 	}
 
 	@Override
-	public ColorPickerWidget colorPickerWidget() {
+	public ColorPickerWidget getColorPicker() {
 		return this.colorPickerWidget;
 	}
 
 	@Override
-	public void toggleColorPicker(boolean active) {
-		this.colorPickerWidget.toggle(active);
-	}
-
-	@Override
-	SelectionManager getSelectionManager() {
+	public SelectionManager getSelectionManager() {
 		return this.selectionManager;
 	}
 }

@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Single widget for containing and handling a bunch of {@link ColorPresetWidget}. Intended for use in the {@link ColorPickerWidget}, but reusable elsewhere too.
@@ -18,9 +19,9 @@ import java.util.function.BiConsumer;
  * @see ColorPickerWidget
  */
 public class ColorPresetsContainerWidget extends PressableWidget {
-	public final ColorPickerWidget colorPickerWidget; // TODO - make this independent of color picker
 	public final List<ColorPresetWidget> presets = new ArrayList<>();
 	public final List<ColorPresetWidget> transparentPresets = new ArrayList<>();
+	public final Supplier<Integer> copyColorSupplier;
 
 	public int presetSize = 16;
 	public int presetPadding = 2;
@@ -28,22 +29,15 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 	public boolean allowAlpha;
 	private BiConsumer<Integer, @Nullable Formatting> presetListener;
 
-	public ColorPresetsContainerWidget(int x, int y, int width, int height, ColorPickerWidget colorPickerWidget) {
+	public ColorPresetsContainerWidget(int x, int y, int width, int height, Supplier<Integer> copyColorSupplier) {
 		super(x, y, width, height, Text.of(""));
-		this.colorPickerWidget = colorPickerWidget;
-		this.allowAlpha = colorPickerWidget.allowAlpha();
+		this.copyColorSupplier = copyColorSupplier;
+		this.createPresets();
 	}
 
-	public void createPresets(boolean includeDefaultPresets, List<Integer> addedPresets) {
-		if(includeDefaultPresets) {
-			ColorPresetWidget.addDefaultWidgets(this.presets, this.colorPickerWidget);
-			ColorPresetWidget.addDefaultTransparentWidgets(this.transparentPresets, this.colorPickerWidget);
-		}
-
-		if(addedPresets.isEmpty()) return;
-		for (int color : addedPresets) {
-			this.presets.add(ColorPresetWidget.fromColor(this.colorPickerWidget, color));
-		}
+	public void createPresets() {
+		ColorPresetWidget.addDefaultWidgets(this, this.presets);
+		ColorPresetWidget.addDefaultTransparentWidgets(this, this.transparentPresets);
 	}
 
 	@Override
@@ -131,6 +125,22 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 
 	public void setAllowAlpha(boolean allowAlpha) {
 		this.allowAlpha = allowAlpha;
+	}
+
+	public void setMinAlpha(float minAlpha) {
+		this.transparentPresets.getFirst().updateAlpha(minAlpha); // hacky but whatever at this point
+	}
+
+	public int getCopyColor() {
+		return this.copyColorSupplier.get();
+	}
+
+	public BiConsumer<Integer, @Nullable Formatting> getPresetListener() {
+		return presetListener;
+	}
+
+	public void setPresetListener(BiConsumer<Integer, @Nullable Formatting> presetListener) {
+		this.presetListener = presetListener;
 	}
 
 	@Override

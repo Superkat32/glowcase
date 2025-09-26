@@ -14,7 +14,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ColorHelper;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -30,6 +29,7 @@ import java.util.function.Supplier;
  */
 public class ColorPresetWidget extends PressableWidget {
 	public static final Identifier ALPHA_TEXTURE = Glowcase.id("alpha_preset");
+
 	// Use our own array instead of Formatting.values() so we can have specific order
 	public static final Formatting[] FORMATTING_COLORS = new Formatting[] {
 		Formatting.DARK_RED, Formatting.RED, Formatting.GOLD, Formatting.YELLOW,
@@ -42,9 +42,9 @@ public class ColorPresetWidget extends PressableWidget {
 		0x00000000, 0x40000000, 0x55000000, 0x77000000, 0x99000000, 0xAA000000, 0xCC000000, 0xFF000000
 	};
 
-	public final ColorPickerWidget colorPickerWidget;
-	public final int color;
-	public final float colorAlpha; // cache the alpha value in constructor
+	public final ColorPresetsContainerWidget presetsContainerWidget;
+	public int color;
+	public float colorAlpha; // cache the alpha value in constructor
 	@Nullable
 	public Formatting formatting;
 
@@ -53,29 +53,29 @@ public class ColorPresetWidget extends PressableWidget {
 	public boolean copyRgb;
 	public boolean copyAlpha;
 
-	public static void addDefaultWidgets(List<ColorPresetWidget> presetsList, ColorPickerWidget colorPickerWidget) {
+	public static void addDefaultWidgets(ColorPresetsContainerWidget presetsContainerWidget, List<ColorPresetWidget> presetsList) {
 		// my goodness I'm smart
 		presetsList.addAll(Arrays.stream(FORMATTING_COLORS)
-			.map(format -> fromFormatting(colorPickerWidget, format))
+			.map(format -> fromFormatting(presetsContainerWidget, format))
 			.toList()
 		);
 	}
 
-	public static void addDefaultTransparentWidgets(List<ColorPresetWidget> presetsList, ColorPickerWidget colorPickerWidget) {
+	public static void addDefaultTransparentWidgets(ColorPresetsContainerWidget presetsContainerWidget, List<ColorPresetWidget> presetsList) {
 		presetsList.addAll(Arrays.stream(DEFAULT_TRANSPARENCIES)
-			.map(colorInt -> fromColor(colorPickerWidget, colorInt))
+			.map(colorInt -> fromColor(presetsContainerWidget, colorInt))
 			.toList()
 		);
 	}
 
 	public ColorPresetWidget(
-		ColorPickerWidget colorPicker,
+		ColorPresetsContainerWidget presetsContainerWidget,
 		int x, int y, int width, int height,
 		int color, Formatting formatting,
 		Supplier<Integer> colorCopySupplier, boolean copyRgb, boolean copyAlpha
 	) {
 		super(x, y, width, height, Text.of(""));
-		this.colorPickerWidget = colorPicker;
+		this.presetsContainerWidget = presetsContainerWidget;
 		this.color = color;
 		this.formatting = formatting;
 		this.colorCopyReferenceSupplier = colorCopySupplier;
@@ -91,16 +91,16 @@ public class ColorPresetWidget extends PressableWidget {
 	}
 
 	// I really don't know why these static methods are down here, but it felt wrong putting them above the constructor ??
-	public static ColorPresetWidget fromFormatting(ColorPickerWidget colorPicker, Formatting formatting) {
+	public static ColorPresetWidget fromFormatting(ColorPresetsContainerWidget presetsContainerWidget, Formatting formatting) {
 		if(formatting.isColor()) {
-			return ColorPresetWidget.Builder.createFromFormatting(colorPicker, formatting).build();
+			return ColorPresetWidget.Builder.createFromFormatting(presetsContainerWidget, formatting).build();
 		}
 
-		return ColorPresetWidget.Builder.createFromColor(colorPicker, ColorUtil.WHITE).build(); // fallback
+		return ColorPresetWidget.Builder.createFromColor(presetsContainerWidget, ColorUtil.WHITE).build(); // fallback
 	}
 
-	public static ColorPresetWidget fromColor(ColorPickerWidget colorPicker, int color) {
-		return ColorPresetWidget.Builder.createFromColor(colorPicker, color).build();
+	public static ColorPresetWidget fromColor(ColorPresetsContainerWidget presetsContainerWidget, int color) {
+		return ColorPresetWidget.Builder.createFromColor(presetsContainerWidget, color).build();
 	}
 
 	@Override
@@ -131,17 +131,18 @@ public class ColorPresetWidget extends PressableWidget {
 
 	@Override
 	public void onPress() {
-		BiConsumer<Integer, Formatting> presetListener = this.colorPickerWidget.getPresetListener();
+		BiConsumer<Integer, Formatting> presetListener = this.presetsContainerWidget.getPresetListener();
 		if(presetListener != null) {
-			presetListener.accept(this.getCurrentColor(), this.formatting != null && this.formatting.isColor() ? this.formatting : null);
-		} else {
-			if(this.formatting != null && formatting.isColor()) {
-				this.colorPickerWidget.setColor(this.getCurrentColor());
-				this.colorPickerWidget.toggle(false);
-			} else {
-				this.colorPickerWidget.setColor(this.getCurrentColor());
-			}
+			presetListener.accept(this.getCurrentColor(),
+				this.formatting != null && this.formatting.isColor() ?
+					this.formatting : null
+			);
 		}
+	}
+
+	public void updateAlpha(float colorAlpha) {
+		this.colorAlpha = colorAlpha;
+		this.color = ColorHelper.withAlpha(colorAlpha, this.color);
 	}
 
 	@Override
@@ -149,7 +150,7 @@ public class ColorPresetWidget extends PressableWidget {
 
 	@Environment(EnvType.CLIENT)
 	public static class Builder {
-		private final ColorPickerWidget colorPickerWidget;
+		private final ColorPresetsContainerWidget presetsContainerWidget;
 		private int x, y, width, height;
 		private int color;
 		private Formatting formatting = null;
@@ -158,25 +159,25 @@ public class ColorPresetWidget extends PressableWidget {
 		private boolean copyRgb = false;
 		private boolean copyAlpha = false;
 
-		public Builder(ColorPickerWidget colorPickerWidget) {
-			this.colorPickerWidget = colorPickerWidget;
+		public Builder(ColorPresetsContainerWidget presetsContainerWidget) {
+			this.presetsContainerWidget = presetsContainerWidget;
 		}
 
-		public static Builder create(ColorPickerWidget colorPickerWidget) {
-			return new Builder(colorPickerWidget);
+		public static Builder create(ColorPresetsContainerWidget presetsContainerWidget) {
+			return new Builder(presetsContainerWidget);
 		}
 
-		public static Builder createFromFormatting(ColorPickerWidget colorPickerWidget, Formatting formatting) {
-			return new Builder(colorPickerWidget)
+		public static Builder createFromFormatting(ColorPresetsContainerWidget presetsContainerWidget, Formatting formatting) {
+			return new Builder(presetsContainerWidget)
 				.setColor(formatting)
-				.setColorCopyReference(colorPickerWidget::getCurrentColor)
+				.setColorCopyReference(presetsContainerWidget::getCopyColor)
 				.setCopyAlpha(true);
 		}
 
-		public static Builder createFromColor(ColorPickerWidget colorPickerWidget, int color) {
-			return new Builder(colorPickerWidget)
+		public static Builder createFromColor(ColorPresetsContainerWidget presetsContainerWidget, int color) {
+			return new Builder(presetsContainerWidget)
 				.setColor(color)
-				.setColorCopyReference(colorPickerWidget::getCurrentColor)
+				.setColorCopyReference(presetsContainerWidget::getCopyColor)
 				.setCopyRgb(true);
 		}
 
@@ -225,7 +226,7 @@ public class ColorPresetWidget extends PressableWidget {
 
 		public ColorPresetWidget build() {
 			return new ColorPresetWidget(
-				this.colorPickerWidget,
+				this.presetsContainerWidget,
 				this.x, this.y, this.width, this.height,
 				this.color, this.formatting,
 				this.colorCopySupplier, this.copyRgb, this.copyAlpha

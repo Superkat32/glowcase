@@ -20,11 +20,9 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
-import org.apache.commons.compress.utils.Lists;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2fStack;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -51,7 +49,6 @@ public class ColorPickerWidget extends PressableWidget {
 	private static final Identifier CANCEL_TEXTURE = Identifier.ofVanilla("pending_invite/reject");
 	private static final Identifier CANCEL_HIGHLIGHTED_TEXTURE = Identifier.ofVanilla("pending_invite/reject_highlighted");
 	private static final Identifier ALPHA_TEXTURE = Glowcase.id("alpha");
-	private static final Identifier ALPHA_BIG_TEXTURE = Glowcase.id("alpha_big");
 
 	public final ColorPickerIncludedScreen screen;
 	public Element targetElement;
@@ -85,12 +82,8 @@ public class ColorPickerWidget extends PressableWidget {
 	private float light;
 	private float alpha;
 
-	public static ColorPickerWidget.Builder builder(ColorPickerIncludedScreen screen, int x, int y) {
-		return new ColorPickerWidget.Builder(screen, x, y);
-	}
-
-	public ColorPickerWidget(ColorPickerIncludedScreen screen, int x, int y, int width, int height, Text message) {
-		super(x, y, width, height, message);
+	public ColorPickerWidget(ColorPickerIncludedScreen screen, int x, int y, int width, int height) {
+		super(x, y, width, height, Text.empty());
 		this.screen = screen;
 
 		this.confirmButton = IconButtonWidget.builder(CONFIRM_TEXTURE, action -> this.confirmColor())
@@ -99,13 +92,14 @@ public class ColorPickerWidget extends PressableWidget {
 		this.cancelButton = IconButtonWidget.builder(CANCEL_TEXTURE, action -> this.cancel())
 			.hoverIcon(CANCEL_HIGHLIGHTED_TEXTURE).build();
 
-		this.presetsContainerWidget = new ColorPresetsContainerWidget(0, 0, 0, 0, this);
+		this.presetsContainerWidget = new ColorPresetsContainerWidget(0, 0, 0, 0, this::getCurrentColor);
 
 		this.components = List.of( // order isn't used for now, but assume click priority order I suppose
 			this.previewComponent, this.satLightComponent, this.hueComponent, this.alphaComponent
 		);
 
 		this.update();
+		this.toggle(false); // start deactivated
 	}
 
 	@Override
@@ -131,11 +125,11 @@ public class ColorPickerWidget extends PressableWidget {
 		}
 
 		// draw components
-		drawColorPreview(context, this.previewComponent);
-		drawHueBar(context, this.hueComponent);
-		drawSatLight(context, this.satLightComponent);
+		drawColorPreview(context, this.previewComponent, mouseX, mouseY);
+		drawHueBar(context, this.hueComponent, mouseX, mouseY);
+		drawSatLight(context, this.satLightComponent, mouseX, mouseY);
 		if(this.allowAlpha) {
-			drawAlphaBar(context, this.alphaComponent);
+			drawAlphaBar(context, this.alphaComponent, mouseX, mouseY);
 		}
 		if (this.includePresets) {
 			this.presetsContainerWidget.renderWidget(context, mouseX, mouseY, delta);
@@ -216,24 +210,31 @@ public class ColorPickerWidget extends PressableWidget {
 	}
 
 	// Intended for text editing screens (e.g. the color picker formatting button from the text block)
-	public void targetWidget(Screen screen, ClickableWidget widget, int color) {
-		this.targetWidget(screen, widget, color, false, 0f, true, null);
+	public void targetWidget(
+		ClickableWidget widget, int color,
+		int pickerX, int pickerY, int pickerWidth, int pickerHeight
+	) {
+		this.targetWidget(widget, color, false, 0f, true, null, pickerX, pickerY, pickerWidth, pickerHeight);
 	}
 
 	// Intended for text/color field widgets (e.g. the text color/background color from the text block)
-	public void targetWidget(Screen screen, ClickableWidget widget, int color, boolean allowAlpha, float minAlpha, Consumer<Integer> onChange) {
-		this.targetWidget(screen, widget, color, allowAlpha, minAlpha, false, onChange);
+	public void targetWidget(
+		ClickableWidget widget, int color, boolean allowAlpha, float minAlpha, Consumer<Integer> onChange,
+		int pickerX, int pickerY, int pickerWidth, int pickerHeight
+	) {
+		this.targetWidget(widget, color, allowAlpha, minAlpha, false, onChange, pickerX, pickerY, pickerWidth, pickerHeight);
 	}
 
 	public void targetWidget(
-		Screen screen, ClickableWidget widget, int color,
-		boolean allowAlpha, float minAlpha, boolean textEditorMode, Consumer<Integer> onChange
+		ClickableWidget widget, int color,
+		boolean allowAlpha, float minAlpha, boolean textEditorMode, Consumer<Integer> onChange,
+		int pickerX, int pickerY, int pickerWidth, int pickerHeight
 	) {
-		int pickerWidth = DEFAULT_WIDTH;
-		// disallow picker to go beyond screen limits
-		int pickerX = Math.min((widget.getX() + widget.getWidth()) - pickerWidth, screen.width);
-		int pickerY = widget.getY() + widget.getHeight();
-		int pickerHeight = allowAlpha ? DEFAULT_HEIGHT_ALPHA : DEFAULT_HEIGHT;
+//		int pickerWidth = DEFAULT_WIDTH;
+//		// disallow picker to go beyond screen limits
+//		int pickerX = Math.min((widget.getX() + widget.getWidth()) - pickerWidth, screen.width);
+//		int pickerY = widget.getY() + widget.getHeight();
+//		int pickerHeight = allowAlpha ? DEFAULT_HEIGHT_ALPHA : DEFAULT_HEIGHT;
 		this.setPosition(pickerX, pickerY);
 		this.setDimensions(pickerWidth, pickerHeight);
 		this.setAllowAlpha(allowAlpha);
@@ -242,18 +243,20 @@ public class ColorPickerWidget extends PressableWidget {
 		if(!allowAlpha) color = ColorUtil.transferAlpha(ColorUtil.WHITE, color); // remove alpha from color
 		this.setTargetElement(widget);
 		this.setColor(color);
-		this.prevColorEntry = color;
+		if(!this.activeAndVisible() && !this.isFocused()) {
+			this.prevColorEntry = color;
+		}
 
 		if(textEditorMode) { // intended for screen editing
 			this.setOnAccept(picker -> {
-				picker.insertColor(picker.getCurrentColor());
+				this.screen.insertColorHexTag(picker.getCurrentColor());
 				picker.toggle(false);
 			});
 			this.setOnCancel(picker -> picker.toggle(false));
 			this.setChangeListener(null);
 			this.setPresetListener((colorInt, formatting) -> {
 				if(formatting != null) this.screen.insertFormattingTag(formatting);
-				else this.screen.insertHexTag(ColorUtil.getHexCode(colorInt));
+				else this.screen.insertColorHexTag(colorInt);
 				this.toggle(false);
 			});
 			this.toggle(!this.active);
@@ -270,19 +273,20 @@ public class ColorPickerWidget extends PressableWidget {
 		}
 	}
 
-	private void drawColorPreview(DrawContext context, ColorPickerComponent component) {
+	private void drawColorPreview(DrawContext context, ColorPickerComponent component, int mouseX, int mouseY) {
 		if(this.alpha < 1f) {
 			// background tile
-			WidgetRenderUtil.drawPreciseTile(context, ALPHA_BIG_TEXTURE,
+			WidgetRenderUtil.drawPreciseTile(context, ALPHA_TEXTURE,
 				component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(),
 				4, 4
 			);
 		}
 
+		// background
 		context.fill(component.getMinX(), component.getMinY(), component.getMaxX(), component.getMaxY(), this.color);
 	}
 
-	private void drawSatLight(DrawContext context, ColorPickerComponent component) {
+	private void drawSatLight(DrawContext context, ColorPickerComponent component, int mouseX, int mouseY) {
 		// white to current color's hue, left to right
 		WidgetRenderUtil.drawSidewaysGradient(context, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight(), ColorUtil.WHITE, getRgbFromCurrentHue());
 
@@ -293,7 +297,7 @@ public class ColorPickerWidget extends PressableWidget {
 		drawThumb(context, component, 8, 8, this.colorNoAlpha, false);
 	}
 
-	private void drawHueBar(DrawContext context, ColorPickerComponent component) {
+	private void drawHueBar(DrawContext context, ColorPickerComponent component, int mouseX, int mouseY) {
 		int x = component.getMinX();
 		int maxX = component.getMaxX();
 		int y = component.getMinY();
@@ -318,7 +322,7 @@ public class ColorPickerWidget extends PressableWidget {
 		drawThumb(context, component, 6, height + 1, getRgbFromCurrentHue());
 	}
 
-	private void drawAlphaBar(DrawContext context, ColorPickerComponent component) {
+	private void drawAlphaBar(DrawContext context, ColorPickerComponent component, int mouseX, int mouseY) {
 		// background tile
 		context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, ALPHA_TEXTURE, component.getMinX(), component.getMinY(), component.getWidth(), component.getHeight());
 
@@ -464,11 +468,6 @@ public class ColorPickerWidget extends PressableWidget {
 		}
 	}
 
-	public void insertColor(int color) {
-		String hex = ColorUtil.getHexCode(color);
-		this.screen.insertHexTag(hex);
-	}
-
 	public void update() {
 		this.updatePositions();
 		this.updateHSLA();
@@ -478,7 +477,21 @@ public class ColorPickerWidget extends PressableWidget {
 	public void updateThumbPositions() {
 		this.satLightComponent.updateThumbXY(this.saturation, this.light);
 		this.hueComponent.updateThumbX(this.hue);
-		this.alphaComponent.updateThumbX(this.alpha);
+
+		float alphaDelta;
+		if(this.minAlpha != 0f) {
+			alphaDelta = this.alpha - this.minAlpha + (this.alpha * this.minAlpha);
+			if(alphaDelta < 0.5f) {
+				// There's a weird thing with ColorHelper#withAlpha(0.11f, <color>), where the actual alpha is
+				// equal to 0.10980392 instead, which causes an issue with moving the alpha slider to the very end
+				// from presets with 0.11f minAlpha, so this counteracts that and clamps it to not go below 0
+				alphaDelta -= 0.01f;
+				alphaDelta = Math.max(alphaDelta, 0);
+			}
+		} else {
+			alphaDelta = this.alpha;
+		}
+		this.alphaComponent.updateThumbX(alphaDelta);
 	}
 
 	public void updateHSLA() {
@@ -560,10 +573,7 @@ public class ColorPickerWidget extends PressableWidget {
 
 	public void setMinAlpha(float minAlpha) {
 		this.minAlpha = minAlpha;
-	}
-
-	public void setPresets(boolean includeDefaultPresets, List<Integer> addedPresets) {
-		this.presetsContainerWidget.createPresets(includeDefaultPresets, addedPresets);
+		this.presetsContainerWidget.setMinAlpha(minAlpha);
 	}
 
 	public void setIncludePresets(boolean shouldInclude) {
@@ -576,6 +586,7 @@ public class ColorPickerWidget extends PressableWidget {
 
 	public void setPresetListener(BiConsumer<Integer, @Nullable Formatting> presetListener) {
 		this.presetListener = presetListener;
+		this.presetsContainerWidget.setPresetListener(presetListener);
 	}
 
 	public void setOnAccept(Consumer<ColorPickerWidget> onAccept) {
@@ -600,44 +611,25 @@ public class ColorPickerWidget extends PressableWidget {
 	@Environment(EnvType.CLIENT)
 	public static class Builder {
 		private final ColorPickerIncludedScreen screen;
-		private final int x;
-		private final int y;
-		private int width = 150;
-		private int height = 200;
-		private boolean includePresets = true;
-		private boolean includeDefaultPresets = true;
-		private final List<Integer> presetColors = Lists.newArrayList();
 
-		public Builder(ColorPickerIncludedScreen screen, int x, int y) {
+		public static Builder create(ColorPickerIncludedScreen screen) {
+			return new Builder(screen);
+		}
+
+		public Builder(ColorPickerIncludedScreen screen) {
 			this.screen = screen;
-			this.x = x;
-			this.y = y;
-		}
-
-		public ColorPickerWidget.Builder size(int width, int height) {
-			this.width = width;
-			this.height = height;
-			return this;
-		}
-
-		public ColorPickerWidget.Builder includePresets(boolean shouldInclude) {
-			this.includePresets = shouldInclude;
-			return this;
-		}
-
-		public ColorPickerWidget.Builder withPreset(boolean includeDefault, Integer... presets) {
-			this.includeDefaultPresets = includeDefault;
-			this.presetColors.addAll(Arrays.asList(presets));
-			return this;
 		}
 
 		public ColorPickerWidget build() {
-			ColorPickerWidget colorPickerWidget = new ColorPickerWidget(this.screen, this.x, this.y, this.width, this.height, Text.of(""));
-			colorPickerWidget.setIncludePresets(this.includePresets);
-			if (this.includePresets) {
-				colorPickerWidget.setPresets(this.includeDefaultPresets, this.presetColors);
-			}
-			return colorPickerWidget;
+			return new ColorPickerWidget(
+				this.screen, 0, 0, DEFAULT_WIDTH, DEFAULT_HEIGHT
+			);
+//			ColorPickerWidget colorPickerWidget = new ColorPickerWidget(this.screen, this.x, this.y, this.width, this.height, Text.of(""));
+//			colorPickerWidget.setIncludePresets(this.includePresets);
+//			if (this.includePresets) {
+//				colorPickerWidget.setPresets(this.includeDefaultPresets, this.presetColors);
+//			}
+//			return colorPickerWidget;
 		}
 	}
 }
