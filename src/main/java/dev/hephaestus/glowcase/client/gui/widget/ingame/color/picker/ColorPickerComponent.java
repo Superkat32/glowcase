@@ -1,8 +1,5 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
+package dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker;
 
-import dev.hephaestus.glowcase.client.util.ColorUtil;
-import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 

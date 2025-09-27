@@ -1,5 +1,6 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
+package dev.hephaestus.glowcase.client.gui.widget.ingame.color.preset;
 
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.PressableWidget;

@@ -1,6 +1,7 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
+package dev.hephaestus.glowcase.client.gui.widget.ingame.color.preset;
 
 import dev.hephaestus.glowcase.Glowcase;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
 import net.fabricmc.api.EnvType;

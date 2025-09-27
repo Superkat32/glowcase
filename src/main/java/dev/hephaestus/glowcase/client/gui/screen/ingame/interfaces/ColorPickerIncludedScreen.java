@@ -1,6 +1,6 @@
 package dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces;
 
-import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 
 /**
  * A screen which has {@link ColorPickerWidget} support. <br><br>

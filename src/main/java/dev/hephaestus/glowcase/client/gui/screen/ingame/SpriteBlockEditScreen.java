@@ -6,7 +6,7 @@ import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIn
 import dev.hephaestus.glowcase.client.gui.widget.ingame.GlowcaseTextFieldWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.SuggestionListWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditSpriteBlock;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.DrawContext;

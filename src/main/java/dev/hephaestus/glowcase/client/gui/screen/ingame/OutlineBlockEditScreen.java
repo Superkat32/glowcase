@@ -4,7 +4,7 @@ import com.google.common.primitives.Ints;
 import dev.hephaestus.glowcase.block.entity.OutlineBlockEntity;
 import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditOutlineBlock;
 import dev.hephaestus.glowcase.util.TextUtils;
 import net.minecraft.client.gui.DrawContext;

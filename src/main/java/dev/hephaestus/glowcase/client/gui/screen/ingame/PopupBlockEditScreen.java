@@ -5,7 +5,7 @@ import dev.hephaestus.glowcase.block.entity.PopupBlockEntity;
 import dev.hephaestus.glowcase.block.entity.TextBlockEntity;
 import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditPopupBlock;
 import dev.hephaestus.glowcase.util.TextUtils;
 import net.minecraft.client.MinecraftClient;

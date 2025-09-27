@@ -1,8 +1,10 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.color;
+package dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker;
 
 import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.preset.ColorPresetWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.preset.ColorPresetsContainerWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.client.util.WidgetRenderUtil;
 import net.fabricmc.api.EnvType;
@@ -10,7 +12,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.PressableWidget;
