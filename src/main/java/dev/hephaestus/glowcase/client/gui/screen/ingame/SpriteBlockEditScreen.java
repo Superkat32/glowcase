@@ -19,7 +19,6 @@ import net.minecraft.registry.Registries;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -33,7 +32,6 @@ public class SpriteBlockEditScreen extends GlowcaseScreen implements ColorPicker
 	private ButtonWidget spriteWidgetHelpButton;
 	private ButtonWidget rotationWidget;
 	private ButtonWidget zOffsetToggle;
-//	private TextFieldWidget colorEntryWidget;
 	private ColorFieldWidget colorEntryWidget;
 	private TextFieldWidget scaleEntryWidget;
 
@@ -167,19 +165,12 @@ public class SpriteBlockEditScreen extends GlowcaseScreen implements ColorPicker
 			setTooltip(this.spriteHelpTooltipText);
 		}*/
 
-		// render the list over everything
-//		suggestionWidget.renderWidget(context, mouseX, mouseY, delta);
+		// render priority widgets over everything
 		this.renderPriorityWidgets(context, mouseX, mouseY, delta);
 	}
 
 	@Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-//		if(spriteWidget.isFocused() && this.mouseClickedPriorityWidgets(mouseX, mouseY, button)) {
-//			this.setFocused(spriteWidget);
-//			return true;
-//        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
-//            return suggestionWidget.mouseClicked(mouseX, mouseY, button);
-
 		// Do it this way instead of mouseClickedPriorityWidgets because
 		// the suggestion widget shouldn't be focused when clicked, otherwise it resets the scroll
 		ClickableWidget hoveredPriorityWidget = this.getHoveredPriorityWidget(mouseX, mouseY);
@@ -192,36 +183,20 @@ public class SpriteBlockEditScreen extends GlowcaseScreen implements ColorPicker
 				return true;
 			}
 		} else {
+			tryClosingColorPicker(mouseX, mouseY);
 			suggestionWidget.updateSuggestions(new ArrayList<>(), "", this);
 		}
-
-//		if(spriteWidget.isFocused() && this.mouseClickedPriorityWidgets(mouseX, mouseY, button, false)) {
-//			return true;
-//        } else if(this.colorPickerWidget.mouseClicked(mouseX, mouseY, button)) {
-//			return true;
-//		} else {
-//            suggestionWidget.updateSuggestions(new ArrayList<>(), "", this);
-//        }
 
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-//		if(this.mouseDraggedPriorityWidgets(mouseX, mouseY, button, deltaX, deltaY)) {
-//			return true;
-//		}
-
 		if (suggestionWidget.draggingScrollbar && this.suggestionWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) {
 			return true;
 		} else if(this.colorPickerWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) {
 			return true;
 		}
-//		if (suggestionWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY))
-//			return true;
-//		} else if (this.colorPickerWidget.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) {
-//			return true;
-//		}
 
 		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
 	}
@@ -229,17 +204,6 @@ public class SpriteBlockEditScreen extends GlowcaseScreen implements ColorPicker
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
 		// only scroll suggestion list if spriteWidget is focused
-//		ClickableWidget hoveredPriorityWidget = this.getHoveredPriorityWidget(mouseX, mouseY);
-//		if(hoveredPriorityWidget != null) {
-//			if(hoveredPriorityWidget == this.suggestionWidget
-//				&& this.spriteWidget.isFocused() && this.suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
-//				return true;
-//			} else if(hoveredPriorityWidget == this.colorPickerWidget && colorPickerWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
-//				return true;
-//			}
-//		}
-
-//		if(spriteWidget.isFocused() && this.mouseScrolledPriorityWidgets(mouseX, mouseY, horizontalAmount, verticalAmount)) {
         if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
             suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
             return true;
@@ -251,7 +215,6 @@ public class SpriteBlockEditScreen extends GlowcaseScreen implements ColorPicker
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if(this.keyPressedPriorityWidgets(keyCode, scanCode, modifiers)) {
-//		if (suggestionWidget.keyPressed(keyCode, scanCode, modifiers)) {
 			return true;
 		}
 		return super.keyPressed(keyCode, scanCode, modifiers);

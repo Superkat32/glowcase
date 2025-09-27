@@ -2,17 +2,21 @@ package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import com.google.common.primitives.Ints;
 import dev.hephaestus.glowcase.block.entity.OutlineBlockEntity;
+import dev.hephaestus.glowcase.client.gui.screen.ingame.interfaces.ColorPickerIncludedScreen;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorFieldWidget;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.color.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditOutlineBlock;
 import dev.hephaestus.glowcase.util.TextUtils;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
+import net.minecraft.client.util.SelectionManager;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
 import net.minecraft.util.math.Vec3i;
 
 import java.util.function.Predicate;
 
-public class OutlineBlockEditScreen extends GlowcaseScreen {
+public class OutlineBlockEditScreen extends GlowcaseScreen implements ColorPickerIncludedScreen {
 	private static final Predicate<String> TEXT_PREDICATE = s -> s.matches("-?\\d*");
 
 	private final OutlineBlockEntity outlineBlockEntity;
@@ -25,7 +29,9 @@ public class OutlineBlockEditScreen extends GlowcaseScreen {
 	private TextFieldWidget xScaleWidget;
 	private TextFieldWidget yScaleWidget;
 	private TextFieldWidget zScaleWidget;
-	private TextFieldWidget colorEntryWidget;
+	private ColorFieldWidget colorEntryWidget;
+
+	private ColorPickerWidget colorPickerWidget;
 
 	public OutlineBlockEditScreen(OutlineBlockEntity outlineBlockEntity) {
 		this.outlineBlockEntity = outlineBlockEntity;
@@ -107,14 +113,14 @@ public class OutlineBlockEditScreen extends GlowcaseScreen {
 		this.yScaleWidget.setPlaceholder(TextUtils.placeholder("gui.glowcase.y"));
 		this.zScaleWidget.setPlaceholder(TextUtils.placeholder("gui.glowcase.z"));
 
-		this.colorEntryWidget = new TextFieldWidget(this.client.textRenderer, width / 2 - 25, height / 2 + 35, 50, 20, Text.empty());
-		this.colorEntryWidget.setText("#" + String.format("%1$06X", this.outlineBlockEntity.color & 0x00FFFFFF));
-		this.colorEntryWidget.setChangedListener(string -> {
-			TextColor.parse(this.colorEntryWidget.getText()).ifSuccess(color -> {
-				this.outlineBlockEntity.color = color == null ? 0xFFFFFFFF : color.getRgb() | 0xFF000000;
-			});
-		});
+		this.colorPickerWidget = createColorPicker();
+		this.colorEntryWidget = ColorFieldWidget.Builder
+			.create(this, width / 2 - 25, height / 2 + 35, this.outlineBlockEntity::getColor, this.outlineBlockEntity::setColor)
+			.colorPicker(this.colorPickerWidget)
+			.offsetColorPicker(0, -ColorPickerWidget.DEFAULT_HEIGHT - ColorFieldWidget.DEFAULT_HEIGHT)
+			.build();
 
+		this.addPriorityWidget(this.colorPickerWidget);
 		this.addDrawableChild(this.offsetWidget);
 		this.addDrawableChild(this.scaleWidget);
 		this.addDrawableChild(this.xOffsetWidget);
@@ -126,9 +132,34 @@ public class OutlineBlockEditScreen extends GlowcaseScreen {
 		this.addDrawableChild(this.colorEntryWidget);
 	}
 
-		@Override
+	@Override
+	public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
+		super.render(context, mouseX, mouseY, deltaTicks);
+		this.renderPriorityWidgets(context, mouseX, mouseY, deltaTicks);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if(this.mouseClickedPriorityWidgets(mouseX, mouseY, button)) {
+			return true;
+		}
+		tryClosingColorPicker(mouseX, mouseY);
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
+
+	@Override
 	public void close() {
 		C2SEditOutlineBlock.of(outlineBlockEntity).send();
 		super.close();
+	}
+
+	@Override
+	public ColorPickerWidget getColorPicker() {
+		return this.colorPickerWidget;
+	}
+
+	@Override
+	public SelectionManager getSelectionManager() {
+		return null;
 	}
 }

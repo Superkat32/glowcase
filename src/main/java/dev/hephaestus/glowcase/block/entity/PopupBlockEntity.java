@@ -89,4 +89,12 @@ public class PopupBlockEntity extends GlowcaseBlockEntity {
 			this.lines.set(i, Text.empty().append(parsed).setStyle(Style.EMPTY.withInsertion(string)));
 		}
 	}
+
+	public int getColor() {
+		return color;
+	}
+
+	public void setColor(int color) {
+		this.color = color;
+	}
 }

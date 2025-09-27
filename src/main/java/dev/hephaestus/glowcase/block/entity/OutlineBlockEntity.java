@@ -37,4 +37,12 @@ public class OutlineBlockEntity extends GlowcaseBlockEntity {
 		this.scale = view.read("scale", Vec3i.CODEC).orElseGet(() -> new Vec3i(1, 1, 1));
 		this.color = view.getInt("color", 0xFFFFFF);
 	}
+
+	public void setColor(int color) {
+		this.color = color;
+	}
+
+	public int getColor() {
+		return this.color;
+	}
 }

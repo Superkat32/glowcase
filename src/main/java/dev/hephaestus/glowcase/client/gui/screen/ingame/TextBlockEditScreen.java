@@ -27,8 +27,6 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 	private List<TextFieldWidget> textWidgets;
 
-	private List<TextFieldWidget> colorListeners;
-
 	private SelectionManager selectionManager;
 	private int currentRow;
 	private long ticksSinceOpened = 0;
@@ -93,8 +91,6 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			})
 			.pos(middle - 90 + innerPadding, 20 + innerPadding).build();
 
-//		this.colorPickerWidget = ColorPickerWidget.builder(this, 226, 10).size(182, 104).build();
-//		this.colorPickerWidget.toggle(false); // start deactivated
 		this.colorPickerWidget = createColorPicker();
 
 		this.colorEntryWidget = ColorFieldWidget.Builder
@@ -151,11 +147,6 @@ public class TextBlockEditScreen extends TextEditorScreen {
 			this.colorEntryWidget,
 			this.backgroundColorEntryWidget,
 			this.viewDistanceField
-		);
-
-		this.colorListeners = List.of(
-			this.colorEntryWidget,
-			this.backgroundColorEntryWidget
 		);
 
 		addFormattingButtons(middle + 70, 20, innerPadding, 20, 2);
@@ -359,11 +350,8 @@ public class TextBlockEditScreen extends TextEditorScreen {
 
 		if(this.mouseClickedPriorityWidgets(mouseX, mouseY, button)) {
 			return true; // don't click anything else
-		} else if (this.colorPickerWidget.activeAndVisible() &&
-			!this.colorPickerWidget.targetElement.isMouseOver(mouseX, mouseY)
-		) { // don't disable color picker if its target element was clicked
-			this.toggleColorPicker(false);
 		}
+		tryClosingColorPicker(mouseX, mouseY);
 
 		for (final var text : textWidgets) {
 			if (!text.mouseClicked(mouseX, mouseY, button)) {
