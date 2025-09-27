@@ -190,7 +190,6 @@ public class ColorFieldWidget extends TextFieldWidget {
 			int pickerWidth = ColorPickerWidget.DEFAULT_WIDTH;
 			// disallow picker to go beyond screen limits
 			int pickerX = Math.min((this.x + this.width) - pickerWidth, this.screen.width);
-//			int pickerX = this.x + this.width - pickerWidth;
 			int pickerY = this.y + this.height;
 			return this.colorPicker(colorPickerWidget, pickerX, pickerY);
 		}

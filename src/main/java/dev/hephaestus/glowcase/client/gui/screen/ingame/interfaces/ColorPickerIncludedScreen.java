@@ -30,11 +30,6 @@ public interface ColorPickerIncludedScreen extends TextFormattingScreen {
 		if(colorPicker.activeAndVisible() && !colorPicker.targetElement.isMouseOver(mouseX, mouseY)) {
 			this.toggleColorPicker(false);
 		}
-//	} else if (this.colorPickerWidget.activeAndVisible() &&
-//		!this.colorPickerWidget.targetElement.isMouseOver(mouseX, mouseY)
-//		) { // don't disable color picker if its target element was clicked
-//		this.toggleColorPicker(false);
-//	}
 	}
 
 }

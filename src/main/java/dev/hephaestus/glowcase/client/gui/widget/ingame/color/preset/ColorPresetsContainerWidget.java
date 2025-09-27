@@ -42,7 +42,7 @@ public class ColorPresetsContainerWidget extends PressableWidget {
 	}
 
 	@Override
-	protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
 		renderPresetList(context, this.presets, this.getY(), mouseX, mouseY, delta);
 
 		if(!this.allowAlpha) return;
