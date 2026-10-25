@@ -41,4 +41,6 @@ accessible class net/minecraft/client/gui/components/MultilineTextField$StringVi
 accessible field net/minecraft/client/gui/components/EditBox displayPos I
 accessible field net/minecraft/client/gui/components/EditBox highlightPos I
 
+accessible field net/minecraft/client/gui/components/Checkbox selected Z
+
 accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;

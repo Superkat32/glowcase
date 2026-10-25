@@ -11,6 +11,7 @@ import dev.hephaestus.glowcase.client.gui.widget.ingame.slider.EditableSliderWid
 import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTab;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTabNavBar;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.GlowcaseMultilineEditBox;
+import dev.hephaestus.glowcase.client.undo.UndoManager;
 import dev.hephaestus.glowcase.client.util.Tooltips;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
 import dev.hephaestus.glowcase.util.TextJustify;

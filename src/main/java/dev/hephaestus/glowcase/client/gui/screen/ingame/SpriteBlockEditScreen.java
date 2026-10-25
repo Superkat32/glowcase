@@ -5,7 +5,10 @@ import dev.hephaestus.glowcase.client.gui.widget.ingame.GlowcaseEditBox;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.SuggestionListWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.HexColorEditBox;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
+import dev.hephaestus.glowcase.client.undo.UndoManager;
+import dev.hephaestus.glowcase.client.undo.action.ingame.ValueUndoAction;
 import dev.hephaestus.glowcase.packet.C2SEditSpriteBlock;
+import dev.hephaestus.glowcase.util.ZOffset;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -24,7 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> implements ColorPickerIncludedScreen {
+public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> implements ColorPickerIncludedScreen, UndoHistoryIncludedScreen {
+	private final UndoManager undoManager = new UndoManager(this);
+
 	private EditBox spriteWidget;
 	private Button spriteWidgetHelpButton;
 	private Button rotationWidget;
@@ -50,6 +55,15 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 		this.spriteWidget.setMaxLength(255);
 		this.spriteWidget.setValue(blockEntity.getSprite());
 		this.spriteWidget.setResponder(string -> {
+			this.undoManager.addAction(new ValueUndoAction<>(
+				Component.literal("Undo Set Sprite"),
+				string,
+				this.blockEntity.getSprite(),
+				value -> {
+					this.blockEntity.setSprite(value);
+					this.spriteWidget.setValue(value);
+				}
+			));
 			this.blockEntity.setSprite(this.spriteWidget.getValue());
 		});
 
@@ -61,10 +75,29 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 			.build();
 
 		this.rotationWidget = Button.builder(Component.translatable("gui.glowcase.rotate"), (action) -> {
-			this.blockEntity.rotation = (this.blockEntity.rotation + 45) % 360;
+			int newRotation = (this.blockEntity.rotation + 45) % 360;
+			this.undoManager.addAction(new ValueUndoAction<>(
+				Component.literal("Undo Set Rotation"),
+				newRotation,
+				this.blockEntity.rotation,
+				value -> {
+					this.blockEntity.rotation = value;
+				}
+			));
+			this.blockEntity.rotation = newRotation;
 		}).bounds(width / 2 - 90, height / 2 - 25, 180, 20).build();
 
 		this.zOffsetToggle = Button.builder(Component.literal(this.blockEntity.zOffset.name()), action -> {
+			ZOffset newZOffset = blockEntity.zOffset.next();
+			this.undoManager.addAction(new ValueUndoAction<>(
+				Component.literal("Undo Set Z Offset"),
+				newZOffset,
+				this.blockEntity.zOffset,
+				value -> {
+					this.blockEntity.zOffset = value;
+					this.zOffsetToggle.setMessage(Component.literal(this.blockEntity.zOffset.name()));
+				}
+			));
 			blockEntity.zOffset = blockEntity.zOffset.next();
 
 			this.zOffsetToggle.setMessage(Component.literal(this.blockEntity.zOffset.name()));
@@ -83,7 +116,17 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 		this.scaleEntryWidget.setValue(String.valueOf(this.blockEntity.scale));
 		this.scaleEntryWidget.setResponder(string -> {
 			 try {
-				 this.blockEntity.scale = Float.parseFloat(string);
+				 float newScale = Float.parseFloat(string);
+				 this.undoManager.addAction(new ValueUndoAction<>(
+					 Component.literal("Set Scale"),
+					 newScale,
+					 this.blockEntity.scale,
+					 value -> {
+						 this.blockEntity.scale = value;
+						 this.scaleEntryWidget.setValue(String.valueOf(value));
+					 }
+				 ));
+				 this.blockEntity.scale = newScale;
 			 } catch (NumberFormatException ignored) {}
 		});
 
@@ -186,6 +229,7 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (this.keyPressedUndoHistory(event)) return true;
 		if (suggestionWidget.keyPressed(event)) {
 			return true;
 		}
@@ -203,5 +247,10 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 	@Override
 	public ColorPickerWidget getColorPickerWidget() {
 		return this.colorPickerWidget;
+	}
+
+	@Override
+	public UndoManager getUndoManager() {
+		return this.undoManager;
 	}
 }
