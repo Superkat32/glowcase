@@ -4,8 +4,6 @@ import com.google.common.primitives.Floats;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.hephaestus.glowcase.block.entity.ScreenBlockEntity;
 import dev.hephaestus.glowcase.client.undo.UndoManager;
-import dev.hephaestus.glowcase.client.undo.action.ingame.BooleanUndoAction;
-import dev.hephaestus.glowcase.client.undo.action.ingame.EnumUndoAction;
 import dev.hephaestus.glowcase.packet.C2SEditScreenBlock;
 import dev.hephaestus.glowcase.util.TextUtils;
 import net.minecraft.client.gui.components.Button;
@@ -18,7 +16,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.jetbrains.annotations.Nullable;
 
-public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> implements UndoHistoryIncludedScreen {
+public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> {
 	private final UndoManager undoManager = new UndoManager(this);
 
 	private EditBox widthEntryWidget;
@@ -146,16 +144,16 @@ public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> 
 				case NEGATIVE -> blockEntity.zOffset = ScreenBlockEntity.Offset.POSITIVE;
 			}
 
-			this.undoManager.addAction(new EnumUndoAction<>(
-				Component.literal("Undo Set Z Offset"), this.blockEntity.zOffset, prevZOffset, value -> {
-					this.blockEntity.zOffset = value;
-					this.zOffsetToggle.setMessage(Component.translatable(switch (this.blockEntity.zOffset) {
-						case NEGATIVE -> "gui.glowcase.back";
-						case NULL -> "gui.glowcase.center";
-						case POSITIVE -> "gui.glowcase.front";
-					}));
-				}
-			));
+//			this.undoManager.addAction(new EnumUndoAction<>(
+//				Component.literal("Undo Set Z Offset"), this.blockEntity.zOffset, prevZOffset, value -> {
+//					this.blockEntity.zOffset = value;
+//					this.zOffsetToggle.setMessage(Component.translatable(switch (this.blockEntity.zOffset) {
+//						case NEGATIVE -> "gui.glowcase.back";
+//						case NULL -> "gui.glowcase.center";
+//						case POSITIVE -> "gui.glowcase.front";
+//					}));
+//				}
+//			));
 
 			this.zOffsetToggle.setMessage(Component.translatable(switch (this.blockEntity.zOffset) {
 				case NEGATIVE -> "gui.glowcase.back";
@@ -230,12 +228,12 @@ public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> 
 			.selected(this.blockEntity.renderBackface)
 			.onValueChange((checkbox, checked) -> {
 				this.blockEntity.renderBackface = checked;
-				this.undoManager.addAction(
-					new BooleanUndoAction(Component.literal("Undo Set Render Backface"), checked, value -> {
-						this.blockEntity.renderBackface = value;
-						this.renderBackfaceWidget.selected = value;
-					})
-				);
+//				this.undoManager.addAction(
+//					new BooleanUndoAction(Component.literal("Undo Set Render Backface"), checked, value -> {
+//						this.blockEntity.renderBackface = value;
+//						this.renderBackfaceWidget.selected = value;
+//					})
+//				);
 			})
 			.pos(width / 10, height / 2 - 30 + 11)
 			.build();
@@ -308,7 +306,7 @@ public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> 
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		if (this.keyPressedUndoHistory(event)) return true;
+//		if (this.keyPressedUndoHistory(event)) return true;
 
 		int keyCode = event.key();
 		if (keyCode == InputConstants.KEY_RETURN || keyCode == InputConstants.KEY_ESCAPE) {
@@ -358,8 +356,8 @@ public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> 
 		return C2SEditScreenBlock.of(blockEntity);
 	}
 
-	@Override
-	public UndoManager getUndoManager() {
-		return this.undoManager;
-	}
+//	@Override
+//	public UndoManager getUndoManager() {
+//		return this.undoManager;
+//	}
 }

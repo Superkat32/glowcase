@@ -7,18 +7,23 @@ import net.minecraft.client.input.KeyEvent;
 
 public interface UndoHistoryIncludedScreen {
 
+	void updateWidgetsFromValues();
+
 	UndoManager getUndoManager();
 
-	default void addUndoAction(AbstractUndoAction action) {
+	default void runUndoableAction(AbstractUndoAction action) {
+		action.init();
 		this.getUndoManager().addAction(action);
 	}
 
 	default void undo() {
 		this.getUndoManager().undo();
+		this.updateWidgetsFromValues();
 	}
 
 	default void redo() {
 		this.getUndoManager().redo();
+		this.updateWidgetsFromValues();
 	}
 
 	default boolean keyPressedUndoHistory(KeyEvent event) {

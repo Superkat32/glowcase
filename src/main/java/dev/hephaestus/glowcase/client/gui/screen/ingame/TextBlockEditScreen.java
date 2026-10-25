@@ -12,6 +12,7 @@ import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTab;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTabNavBar;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.GlowcaseMultilineEditBox;
 import dev.hephaestus.glowcase.client.undo.UndoManager;
+import dev.hephaestus.glowcase.client.undo.action.SingleUndoAction;
 import dev.hephaestus.glowcase.client.util.Tooltips;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
 import dev.hephaestus.glowcase.util.TextJustify;
@@ -42,10 +43,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor<TextBlockEntity> {
+public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor<TextBlockEntity>, UndoHistoryIncludedScreen {
 	private final TextBlockEntity textBlockEntity;
+	private final UndoManager undoManager = new UndoManager(this);
 
 	private GlowcaseMultilineEditBox glowcaseEditBox;
+	private EditableSliderWidget scaleSlider;
 	private HexColorEditBox colorEntryWidget;
 	private HexColorEditBox backgroundColorEntryWidget;
 
@@ -109,7 +112,7 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		// nav bar y padding (2) + tab button height (20) + widget area padding (1) = 23;
 		int firstRowY = 23;
 
-		EditableSliderWidget scaleSlider = EditableSliderWidget.builder(
+		this.scaleSlider = EditableSliderWidget.builder(
 			this.font, this.textBlockEntity.scale, 0.125f, 16,
 			aFloat -> Component.translatable("gui.glowcase.scale_value", aFloat),
 			aFloat -> {
@@ -176,19 +179,82 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		this.initJustifyButtons(0, 0, 0);
 
 		this.zFrontButton = Button.builder(Component.translatable("gui.glowcase.front"), button -> {
-			this.textBlockEntity.offset = ZOffset.FRONT.setZ(this.textBlockEntity.offset);
-			this.textBlockEntity.rebake(true);
+			this.runUndoableAction(new SingleUndoAction<>(
+				Component.literal("Set Z Offset Front"),
+				ZOffset.FRONT.setZ(this.textBlockEntity.offset),
+				this.textBlockEntity.offset,
+				value -> this.textBlockEntity.offset = value
+			));
+			this.offsetWidgets.setVec(this.textBlockEntity.offset);
 			this.updateSelectedZButton();
+
+//			this.setZOffsetFromButton(ZOffset.FRONT);
+
+//			this.addUndoAction(new EnumUndoAction<>(
+//				Component.literal("Undo Set Z Offset"),
+//				ZOffset.FRONT.setZ(this.textBlockEntity.offset),
+//				this.textBlockEntity.offset,
+//				value -> {
+//					this.textBlockEntity.offset = value;
+//					this.updateSelectedZButton();
+//				})
+//			);
+
+//			this.textBlockEntity.offset = ZOffset.FRONT.setZ(this.textBlockEntity.offset);
+//			this.textBlockEntity.rebake(true);
+//			this.updateSelectedZButton();
 		}).size(50, 20).build();
 		this.zCenterButton = Button.builder(Component.translatable("gui.glowcase.center"), button -> {
-			this.textBlockEntity.offset = ZOffset.CENTER.setZ(this.textBlockEntity.offset);
-			this.textBlockEntity.rebake(true);
+			this.runUndoableAction(new SingleUndoAction<>(
+				Component.literal("Set Z Offset Center"),
+				ZOffset.CENTER.setZ(this.textBlockEntity.offset),
+				this.textBlockEntity.offset,
+				value -> this.textBlockEntity.offset = value
+			));
+			this.offsetWidgets.setVec(this.textBlockEntity.offset);
 			this.updateSelectedZButton();
+
+//			this.setZOffsetFromButton(ZOffset.CENTER);
+
+//			this.addUndoAction(new EnumUndoAction<>(
+//				Component.literal("Undo Set Z Offset"),
+//				ZOffset.CENTER.setZ(this.textBlockEntity.offset),
+//				this.textBlockEntity.offset,
+//				value -> {
+//					this.textBlockEntity.offset = value;
+//					this.updateSelectedZButton();
+//				})
+//			);
+
+//			this.textBlockEntity.offset = ZOffset.CENTER.setZ(this.textBlockEntity.offset);
+//			this.textBlockEntity.rebake(true);
+//			this.updateSelectedZButton();
 		}).size(50, 20).build();
 		this.zBackButton = Button.builder(Component.translatable("gui.glowcase.back"), button -> {
-			this.textBlockEntity.offset = ZOffset.BACK.setZ(this.textBlockEntity.offset);
-			this.textBlockEntity.rebake(true);
+			this.runUndoableAction(new SingleUndoAction<>(
+				Component.literal("Set Z Offset Back"),
+				ZOffset.BACK.setZ(this.textBlockEntity.offset),
+				this.textBlockEntity.offset,
+				value -> this.textBlockEntity.offset = value
+			));
+			this.offsetWidgets.setVec(this.textBlockEntity.offset);
 			this.updateSelectedZButton();
+
+//			this.setZOffsetFromButton(ZOffset.BACK);
+
+//			this.addUndoAction(new EnumUndoAction<>(
+//				Component.literal("Undo Set Z Offset"),
+//				ZOffset.BACK.setZ(this.textBlockEntity.offset),
+//				this.textBlockEntity.offset,
+//				value -> {
+//					this.textBlockEntity.offset = value;
+//					this.updateSelectedZButton();
+//				})
+//			);
+
+//			this.textBlockEntity.offset = ZOffset.BACK.setZ(this.textBlockEntity.offset);
+//			this.textBlockEntity.rebake(true);
+//			this.updateSelectedZButton();
 		}).size(50, 20).build();
 		this.updateSelectedZButton();
 
@@ -237,9 +303,32 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		this.textShadowButton = CycleButton.onOffBuilder(this.textBlockEntity.shadow).create(
 			Component.translatable("gui.glowcase.text_shadow"),
 			(button, shadow) -> {
-				this.textBlockEntity.shadow = shadow;
-				this.textBlockEntity.rebake(true);
-				this.glowcaseEditBox.setTextShadow(shadow);
+				this.runUndoableAction(new SingleUndoAction<>(
+					Component.literal("Text Shadow"),
+					shadow,
+					this.textBlockEntity.shadow,
+					value -> {
+						this.textBlockEntity.shadow = value;
+						this.textBlockEntity.rebake(true);
+						this.glowcaseEditBox.setTextShadow(value);
+					}
+				));
+
+//				this.undoable(new CycleButtonAction<>(this.textShadowButton, shadow, value -> {
+//					this.textBlockEntity.shadow = value;
+//					this.textBlockEntity.rebake(true);
+//					this.glowcaseEditBox.setTextShadow(value);
+//				}));
+
+//				this.textBlockEntity.shadow = shadow;
+//				this.textBlockEntity.rebake(true);
+//				this.glowcaseEditBox.setTextShadow(shadow);
+
+
+//				this.addUndoAction(new CycleButtonAction<>(this.textShadowButton, shadow, !shadow, value -> {
+//					this.textBlockEntity.shadow = value;
+//					this.textBlockEntity.rebake(true);
+//				}));
 			}
 		);
 		textShadowButton.setWidth(100);
@@ -323,6 +412,15 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 	}
 
 	@Override
+	public void updateWidgetsFromValues() {
+		this.updateSelectedZButton();
+		this.offsetWidgets.updateValue(this.textBlockEntity.offset);
+		this.offsetWidgets.setVec(this.textBlockEntity.offset);
+
+		this.textShadowButton.setValue(this.textBlockEntity.shadow);
+	}
+
+	@Override
 	protected TextJustify getJustify() {
 		return this.textBlockEntity.textAlignment;
 	}
@@ -331,6 +429,12 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 	protected void setJustify(final TextJustify justify) {
 		this.textBlockEntity.textAlignment = justify;
 		this.glowcaseEditBox.setTextAlignment(justify);
+	}
+
+	public void setZOffsetFromButton(ZOffset offset) {
+		this.textBlockEntity.offset = offset.setZ(this.textBlockEntity.offset);
+		this.textBlockEntity.rebake(true);
+		this.updateSelectedZButton();
 	}
 
 	public void updateSelectedZButton() {
@@ -349,6 +453,7 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (this.keyPressedUndoHistory(event)) return true;
 		if (this.keyPressedColorPicker(event)) return true;
 		return super.keyPressed(event);
 	}
@@ -431,5 +536,10 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		}
 
 		return fontsInOrder;
+	}
+
+	@Override
+	public UndoManager getUndoManager() {
+		return this.undoManager;
 	}
 }

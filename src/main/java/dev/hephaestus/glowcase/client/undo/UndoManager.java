@@ -9,6 +9,7 @@ import java.util.ArrayList;
 public class UndoManager {
 	private static final int MAX_UNDO_HISTORY = 32; // Arbitrarily chosen
 	public final Screen screen;
+	public boolean activelyChanging = false;
 
 	public ArrayList<AbstractUndoAction> past = new ArrayList<>();
 	@Nullable
@@ -20,6 +21,8 @@ public class UndoManager {
 	}
 
 	public void addAction(AbstractUndoAction action) {
+		if (this.activelyChanging) return;
+
 		if (this.present != null) {
 			this.past.add(this.present);
 		}
@@ -30,6 +33,7 @@ public class UndoManager {
 
 	public void undo() {
 		if (this.present == null) return;
+		this.activelyChanging = true;
 
 		this.present.undo();
 
@@ -40,10 +44,13 @@ public class UndoManager {
 		} else {
 			this.present = null;
 		}
+
+		this.activelyChanging = false;
 	}
 
 	public void redo() {
 		if (this.future.isEmpty()) return;
+		this.activelyChanging = true;
 
 		if (this.present != null) this.past.add(this.present);
 		this.present = this.future.getFirst();
@@ -52,5 +59,7 @@ public class UndoManager {
 		if (this.present != null) {
 			this.present.redo();
 		}
+
+		this.activelyChanging = false;
 	}
 }

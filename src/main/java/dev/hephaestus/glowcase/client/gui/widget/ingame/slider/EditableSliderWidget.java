@@ -1,5 +1,6 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.slider;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.GlowcaseEditBox;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.number.NumberEditBox;
 import dev.hephaestus.glowcase.util.InputFilters;
@@ -74,7 +75,7 @@ public class EditableSliderWidget extends AbstractSliderButton {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		if (event.button() == 1) { // If right-clicked
+		if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) { // If right-clicked
 			this.editing = true;
 			this.editBox.setValue(String.valueOf(this.displayedValue));
 			this.editBox.mouseClicked(event, doubleClick);

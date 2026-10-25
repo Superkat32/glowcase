@@ -9,6 +9,8 @@ public abstract class AbstractUndoAction {
 		this.name = name;
 	}
 
+	public abstract void init();
+
 	public abstract void undo();
 
 	public abstract void redo();
