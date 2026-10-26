@@ -1,14 +1,14 @@
 package dev.hephaestus.glowcase.client.undo;
 
+import dev.hephaestus.glowcase.block.entity.GlowcaseBlockEntity;
 import dev.hephaestus.glowcase.client.undo.action.AbstractUndoAction;
-import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 
 public class UndoManager {
 	private static final int MAX_UNDO_HISTORY = 32; // Arbitrarily chosen
-	public final Screen screen;
+	public final GlowcaseBlockEntity blockEntity;
 	public boolean activelyChanging = false;
 
 	public ArrayList<AbstractUndoAction> past = new ArrayList<>();
@@ -16,8 +16,8 @@ public class UndoManager {
 	public AbstractUndoAction present = null;
 	public ArrayList<AbstractUndoAction> future = new ArrayList<>();
 
-	public UndoManager(Screen screen) {
-		this.screen = screen;
+	public UndoManager(GlowcaseBlockEntity blockEntity) {
+		this.blockEntity = blockEntity;
 	}
 
 	public void addAction(AbstractUndoAction action) {

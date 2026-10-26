@@ -17,7 +17,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.jetbrains.annotations.Nullable;
 
 public class ScreenBlockEditScreen extends BlockEditorScreen<ScreenBlockEntity> {
-	private final UndoManager undoManager = new UndoManager(this);
+//	private final UndoManager undoManager = new UndoManager(this);
 
 	private EditBox widthEntryWidget;
 	private EditBox heightEntryWidget;

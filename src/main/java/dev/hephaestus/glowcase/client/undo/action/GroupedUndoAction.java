@@ -4,10 +4,11 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 public class GroupedUndoAction extends AbstractUndoAction {
-	public List<AbstractUndoAction> actions;
+	public final List<AbstractUndoAction> actions;
 
-	public GroupedUndoAction(Component name) {
+	public GroupedUndoAction(Component name, List<AbstractUndoAction> actions) {
 		super(name);
+		this.actions = actions;
 	}
 
 	@Override
