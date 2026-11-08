@@ -87,7 +87,7 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 				this.textBlockEntity.lines = new ArrayList<>(parsedLines);
 				this.textBlockEntity.rebake(true);
 			}
-		).build();
+		).setUndoManager(this.undoManager).build();
 		this.glowcaseEditBox.updateSettings(this.textBlockEntity.color, this.textBlockEntity.shadow, this.textBlockEntity.textAlignment);
 		this.glowcaseEditBox.textField.seekCursor(Whence.ABSOLUTE, 0);
 		this.addRenderableWidget(this.glowcaseEditBox);
@@ -467,6 +467,11 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 	}
 
 	@Override
+	public void tick() {
+		this.glowcaseEditBox.tick();
+	}
+
+	@Override
 	public ColorPickerWidget getColorPickerWidget() {
 		return this.colorPickerWidget;
 	}
@@ -541,6 +546,10 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 
 	@Override
 	public void undo() {
+		if (!this.glowcaseEditBox.formatTextField.recentInputs.isEmpty()) {
+			this.glowcaseEditBox.formatTextField.snapshotRecentInputs();
+		}
+
 		UndoHistoryIncludedScreen.super.undo();
 		if (this.getUndoManager().past.isEmpty() && this.getUndoManager().present == null) {
 			this.undoButton.active = false;

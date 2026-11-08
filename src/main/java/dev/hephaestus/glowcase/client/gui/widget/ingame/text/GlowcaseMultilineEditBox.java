@@ -1,6 +1,9 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.text;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
+import dev.hephaestus.glowcase.client.undo.UndoManager;
+import dev.hephaestus.glowcase.client.undo.action.text.InsertTextUndoAction;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.client.util.GuiGraphicsUtil;
 import dev.hephaestus.glowcase.util.TextJustify;
@@ -13,6 +16,7 @@ import net.minecraft.client.gui.components.MultilineTextField;
 import net.minecraft.client.gui.components.TextCursorUtils;
 import net.minecraft.client.gui.components.Whence;
 import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.CommonComponents;
@@ -20,6 +24,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -40,6 +45,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public final FormattableMultilineTextField formatTextField;
 
+	@Nullable
+	public final UndoManager undoManager;
 	public final Consumer<List<Component>> parsedUpdateListener;
 	public final Font font;
 	public int sideAlignmentPadding;
@@ -55,12 +62,15 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public long focusedTime;
 
+	public int ticksSinceTyping = 0;
+
 	public static Builder builder(Font font, List<Component> lines, int x, int y, int width, int height, Consumer<List<Component>> parsedUpdateListener) {
 		return new Builder(font, lines, x, y, width, height, parsedUpdateListener);
 	}
 
 	public GlowcaseMultilineEditBox(
 		Font font, List<Component> parsedLines,
+		@Nullable UndoManager undoManager,
 		int x, int y, int width, int height,
 		int sideAlignmentPadding, int lineHeight, int maxLines, boolean truncateText,
 		boolean showBackground, boolean showDecorations,
@@ -69,6 +79,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 	) {
 		super(font, x, y, width, height, CommonComponents.EMPTY, CommonComponents.EMPTY, ColorUtil.WHITE, true, -3092272, showBackground, showDecorations);
 		this.font = font;
+		this.undoManager = undoManager;
 		this.sideAlignmentPadding = sideAlignmentPadding;
 		this.lineHeight = lineHeight;
 		this.maxLines = maxLines;
@@ -85,6 +96,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		this.formatTextField.truncateText = truncateText;
 		this.formatTextField.setCursorListener(this::scrollToCursor);
 		this.textField = this.formatTextField;
+
+		this.formatTextField.undoManager = this.undoManager;
 	}
 
 	public void updateSettings(int textColor, boolean textShadow, TextJustify textAlignment) {
@@ -103,6 +116,13 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public void setTextAlignment(TextJustify textAlignment) {
 		this.formatTextField.setTextAlignment(textAlignment);
+	}
+
+	public void tick() {
+		this.ticksSinceTyping++;
+		if (this.ticksSinceTyping == 40) {
+			this.formatTextField.snapshotRecentInputs();
+		}
 	}
 
 	@Override
@@ -238,6 +258,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 	@Override
 	public boolean charTyped(CharacterEvent event) {
 		if (super.charTyped(event)) {
+			// Handle text overflow adjustment
 			int cursorLineIndex = this.formatTextField.getLineAtCursor();
 			MultilineTextField.StringView cursorLineView = this.formatTextField.getLineView(cursorLineIndex);
 			int cursorLineWidth = this.font.width(this.formatTextField.value().substring(cursorLineView.beginIndex(), cursorLineView.endIndex()));
@@ -245,6 +266,11 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 			if (cursorLineWidth >= this.width) {
 				this.formatTextField.cursorOverflowX -= this.font.width(event.codepointAsString());
 			}
+
+			// Handle undo history management
+			this.formatTextField.trackInput(event.codepointAsString());
+			this.ticksSinceTyping = 0;
+
 			return true;
 		}
 		return false;
@@ -264,6 +290,14 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public void insertTextTag(TextTag tag, boolean findShortestAlias) {
 		this.formatTextField.insertTextTag(tag, findShortestAlias);
+	}
+
+	public void insertTextAt(String input, int position) {
+		this.formatTextField.insertTextAt(input, position);
+	}
+
+	public void deleteTextAt(int length, int position) {
+		this.formatTextField.deleteTextAt(length, position);
 	}
 
 	@Override
@@ -310,6 +344,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		private final int x, y, width, height;
 		private final Consumer<List<Component>> parsedUpdateListener;
 
+		@Nullable
+		private UndoManager undoManager = null;
 		private int sideAlignmentPadding;
 		private int lineHeight = 12;
 		private int maxLines = Integer.MAX_VALUE;
@@ -330,6 +366,11 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 			this.parsedUpdateListener = parsedUpdateListener;
 
 			this.sideAlignmentPadding = this.width / 10;
+		}
+
+		public Builder setUndoManager(@Nullable UndoManager undoManager) {
+			this.undoManager = undoManager;
+			return this;
 		}
 
 		public Builder setSideAlignmentPadding(int sideAlignmentPadding) {
@@ -380,6 +421,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		public GlowcaseMultilineEditBox build() {
 			return new GlowcaseMultilineEditBox(
 				this.font, this.lines,
+				this.undoManager,
 				this.x, this.y, this.width, this.height,
 				this.sideAlignmentPadding, this.lineHeight, this.maxLines, this.truncateText,
 				this.showBackground, this.showDecorations,

@@ -1,6 +1,8 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.text;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.hephaestus.glowcase.client.undo.UndoManager;
+import dev.hephaestus.glowcase.client.undo.action.text.InsertTextUndoAction;
 import dev.hephaestus.glowcase.util.TextJustify;
 import eu.pb4.placeholders.api.ParserContext;
 import eu.pb4.placeholders.api.parsers.NodeParser;
@@ -33,7 +35,8 @@ import java.util.function.Consumer;
  */
 public class FormattableMultilineTextField extends MultilineTextField {
 	public static final NodeParser PARSER = TagParser.DEFAULT;
-	private static final Component ELLIPSIS_SYMBOL = Component.literal("...");
+	public static final List<String> SNAPSHOT_ACTIVATING_CHARACTERS = List.of(" ", "_", "-", "<", ">");
+	public static final Component ELLIPSIS_SYMBOL = Component.literal("...");
 	public final Font font;
 	public final List<Component> parsedLines;
 	public final Consumer<List<Component>> parsedUpdateListener;
@@ -46,6 +49,11 @@ public class FormattableMultilineTextField extends MultilineTextField {
 	public int cursorOverflowX = 0;
 	public int selectCursorOverflowX = 0;
 	public TextJustify textAlignment = TextJustify.CENTER;
+
+	public UndoManager undoManager;
+	public boolean trackRecentInputs = false;
+	public String recentInputs = "";
+	public int recentPos = 0;
 
 	public FormattableMultilineTextField(Font font, List<Component> parsedLines, int x, int width, int sideAlignmentPadding, Consumer<List<Component>> parsedUpdateListener) {
 		super(font, width);
@@ -126,6 +134,27 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		this.insertTag(tagName);
 	}
 
+	public void insertTextAt(String input, int position) {
+		int preInsertCursorPos = this.cursor();
+		int preInsertSelectCursorPos = this.selectCursor;
+
+		this.seekCursor(Whence.ABSOLUTE, position);
+		this.insertText(input);
+
+		int addedLength = input.length();
+		this.seekCursor(Whence.ABSOLUTE, preInsertCursorPos + addedLength);
+		this.selectCursor = preInsertSelectCursorPos + addedLength;
+	}
+
+	public void deleteTextAt(int length, int position) {
+		this.seekCursor(Whence.ABSOLUTE, position);
+		this.selectCursor = this.cursor() + length;
+		this.insertText("");
+
+		this.seekCursor(Whence.ABSOLUTE, position);
+		this.selectCursor = position;
+	}
+
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		// Check formatting hotkeys first, then key press textField if no hotkeys were pressed
@@ -164,6 +193,7 @@ public class FormattableMultilineTextField extends MultilineTextField {
 
 	@Override
 	public void seekCursor(@NonNull Whence whence, int cursor) {
+		this.snapshotRecentInputs();
 		super.seekCursor(whence, cursor);
 
 		int cursorLineIndex = this.getLineAtCursor();
@@ -334,6 +364,29 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		}
 
 		return end;
+	}
+
+	public void trackInput(String input) {
+		if (this.recentInputs.isEmpty()) this.recentPos = this.cursor() - input.length();
+		this.recentInputs = this.recentInputs.concat(input);
+
+		if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(input)) {
+			this.snapshotRecentInputs();
+		}
+	}
+
+	public void snapshotRecentInputs() {
+		if (this.undoManager == null || this.recentInputs.isEmpty()) return;
+
+		this.undoManager.addAction(
+			new InsertTextUndoAction(this, this.recentInputs, this.recentPos)
+		);
+
+		this.clearRecentInputs();
+	}
+
+	public void clearRecentInputs() {
+		this.recentInputs = "";
 	}
 
 	@Override

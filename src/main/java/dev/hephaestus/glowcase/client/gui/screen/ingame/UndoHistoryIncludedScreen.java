@@ -58,8 +58,8 @@ public interface UndoHistoryIncludedScreen {
 				}
 				return true;
 			}
-			case InputConstants.KEY_R -> {
-				this.redo(); // Also use ctrl+r for redo
+			case InputConstants.KEY_R, InputConstants.KEY_Y -> {
+				this.redo(); // Also use ctrl+r or ctrl+y for redo
 				return true;
 			}
 		}
