@@ -1,8 +1,9 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.text;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.hephaestus.glowcase.client.undo.UndoManager;
-import dev.hephaestus.glowcase.client.undo.action.text.InsertTextUndoAction;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.TextUndoHistory;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action.InsertTextUndoAction;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action.SetValueUndoAction;
 import dev.hephaestus.glowcase.util.TextJustify;
 import eu.pb4.placeholders.api.ParserContext;
 import eu.pb4.placeholders.api.parsers.NodeParser;
@@ -35,7 +36,7 @@ import java.util.function.Consumer;
  */
 public class FormattableMultilineTextField extends MultilineTextField {
 	public static final NodeParser PARSER = TagParser.DEFAULT;
-	public static final List<String> SNAPSHOT_ACTIVATING_CHARACTERS = List.of(" ", "_", "-", "<", ">");
+	public static final List<String> SNAPSHOT_ACTIVATING_CHARACTERS = List.of(" ", "_", "-", "\n");
 	public static final Component ELLIPSIS_SYMBOL = Component.literal("...");
 	public final Font font;
 	public final List<Component> parsedLines;
@@ -50,10 +51,12 @@ public class FormattableMultilineTextField extends MultilineTextField {
 	public int selectCursorOverflowX = 0;
 	public TextJustify textAlignment = TextJustify.CENTER;
 
-	public UndoManager undoManager;
-	public boolean trackRecentInputs = false;
+	public TextUndoHistory textUndoHistory = new TextUndoHistory();
+	public boolean trackingInputs = false;
 	public String recentInputs = "";
+	public String recentDeletes = "";
 	public int recentPos = 0;
+	public int ticksSinceRecentInput = 0;
 
 	public FormattableMultilineTextField(Font font, List<Component> parsedLines, int x, int width, int sideAlignmentPadding, Consumer<List<Component>> parsedUpdateListener) {
 		super(font, width);
@@ -63,6 +66,8 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		this.sideAlignmentPadding = sideAlignmentPadding;
 		this.parsedUpdateListener = parsedUpdateListener;
 		this.setValueFromParsedLines();
+
+		this.setTrackingInputs(true);
 	}
 
 	public void parseLinesFromValue() {
@@ -93,6 +98,79 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		this.parseLinesFromValue();
 	}
 
+	public void trackInput(String input) {
+//		if (this.hasSelection()) { // Can be assumed a deletion occurred
+//			String selected = this.getSelectedText();
+//			if (selected.length() > 1) this.snapshotRecentInputs();
+//
+//			this.recentPos = Math.min(this.cursor(), this.selectCursor);
+//			this.recentDeletes = this.recentDeletes.concat(selected);
+//
+//			if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(selected)) this.snapshotRecentInputs();
+//		} else { // Can be assumed no deletion occurred
+//			if (input.length() > 1) this.snapshotRecentInputs();
+//
+//			if (this.recentInputs.isEmpty()) this.recentPos = Math.min(this.cursor(), this.selectCursor);
+//			this.recentInputs = this.recentInputs.concat(input);
+//
+//			if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(input)) this.snapshotRecentInputs();
+//		}
+
+		if (input.length() > 1 || (this.hasSelection() && !this.recentInputs.isEmpty())) this.snapshotRecentInputs();
+
+		if (this.recentInputs.isEmpty()) this.recentPos = Math.min(this.cursor(), this.selectCursor);
+		this.recentInputs = this.recentInputs.concat(input);
+		this.recentDeletes = this.getSelectedText().concat(this.recentDeletes);
+
+		if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(input)) this.snapshotRecentInputs();
+
+		this.ticksSinceRecentInput = 0;
+	}
+
+	public void snapshotRecentInputs() {
+		if (this.recentInputs.isEmpty() && this.recentDeletes.isEmpty()) return;
+		if (!this.shouldTrackInputs()) return;
+
+		this.textUndoHistory.addAction(
+			new InsertTextUndoAction(this.recentInputs, this.recentDeletes, this.recentPos)
+		);
+
+//		if (!this.recentDeletes.isEmpty()) {
+//			this.textUndoHistory.addAction(
+//				new InsertTextUndoAction(this.recentInputs, this.recentDeletes, this.recentPos)
+//			);
+//		} else {
+//			this.textUndoHistory.addAction(
+//				new InsertTextUndoAction(this.recentInputs, this.getSelectedText(), this.recentPos)
+//			);
+//		}
+
+
+//		if (this.recentIsDeleting) {
+//			this.textUndoHistory.addAction(
+//				new DeleteTextUndoAction(this.recentInputs, this.getSelectedText(), this.recentPos)
+//			);
+//		} else {
+//		}
+
+		this.clearRecentInputs();
+	}
+
+	public void clearRecentInputs() {
+		this.recentInputs = "";
+		this.recentDeletes = "";
+		this.recentPos = 0;
+	}
+
+	@Override
+	public void insertText(String input) {
+		if (this.shouldTrackInputs()) {
+			this.trackInput(input);
+		}
+
+		super.insertText(input);
+	}
+
 	public void insertTag(String tagName) {
 		if (tagName.isBlank()) return;
 
@@ -100,6 +178,8 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		String closeTag = "</" + tagName + ">";
 
 		if (this.hasSelection()) {
+			String oldValue = this.value();
+
 			StringView selectedView = this.getSelected();
 			String beforeSelected = this.value().substring(0, selectedView.beginIndex());
 			String selected = this.value().substring(selectedView.beginIndex(), selectedView.endIndex());
@@ -113,6 +193,13 @@ public class FormattableMultilineTextField extends MultilineTextField {
 			this.setValue(beforeSelected + newSelected + afterSelected);
 			this.seekCursor(Whence.ABSOLUTE, preInsertCursorPos + addedLength - closeTag.length());
 			this.selectCursor = preInsertSelectCursorPos + openTag.length();
+
+
+			if (this.shouldTrackInputs()) {
+				this.textUndoHistory.addAction(
+					new SetValueUndoAction(this.value(), oldValue)
+				);
+			}
 		} else {
 			int preInsertCursorPos = this.cursor();
 			this.insertText(openTag + closeTag);
@@ -138,8 +225,10 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		int preInsertCursorPos = this.cursor();
 		int preInsertSelectCursorPos = this.selectCursor;
 
+		this.setTrackingInputs(false);
 		this.seekCursor(Whence.ABSOLUTE, position);
 		this.insertText(input);
+		this.setTrackingInputs(true);
 
 		int addedLength = input.length();
 		this.seekCursor(Whence.ABSOLUTE, preInsertCursorPos + addedLength);
@@ -148,8 +237,11 @@ public class FormattableMultilineTextField extends MultilineTextField {
 
 	public void deleteTextAt(int length, int position) {
 		this.seekCursor(Whence.ABSOLUTE, position);
-		this.selectCursor = this.cursor() + length;
-		this.insertText("");
+//		this.selectCursor = this.cursor() + length;
+		this.setTrackingInputs(false);
+		this.deleteText(length);
+//		this.insertText("");
+		this.setTrackingInputs(true);
 
 		this.seekCursor(Whence.ABSOLUTE, position);
 		this.selectCursor = position;
@@ -160,7 +252,14 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		// Check formatting hotkeys first, then key press textField if no hotkeys were pressed
 		int keyCode = event.key();
 		if (event.hasControlDown()) {
-			if (keyCode == InputConstants.KEY_B) {
+			if (keyCode == InputConstants.KEY_Z) {
+				if (event.hasShiftDown()) this.redo(); // ctrl+shift+z -> redo
+				else this.undo(); // ctrl+z -> undo
+				return true;
+			} else if (keyCode == InputConstants.KEY_Y) {
+				this.redo();
+				return true;
+			} else if (keyCode == InputConstants.KEY_B) {
 				this.insertTextTag(TagRegistry.SAFE.getTag("bold"));
 				return true;
 			} else if (keyCode == InputConstants.KEY_I) {
@@ -366,29 +465,6 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		return end;
 	}
 
-	public void trackInput(String input) {
-		if (this.recentInputs.isEmpty()) this.recentPos = this.cursor() - input.length();
-		this.recentInputs = this.recentInputs.concat(input);
-
-		if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(input)) {
-			this.snapshotRecentInputs();
-		}
-	}
-
-	public void snapshotRecentInputs() {
-		if (this.undoManager == null || this.recentInputs.isEmpty()) return;
-
-		this.undoManager.addAction(
-			new InsertTextUndoAction(this, this.recentInputs, this.recentPos)
-		);
-
-		this.clearRecentInputs();
-	}
-
-	public void clearRecentInputs() {
-		this.recentInputs = "";
-	}
-
 	@Override
 	public boolean overflowsLineLimit(@NonNull String newValue) {
 		if (this.wordWrap) return super.overflowsLineLimit(newValue);
@@ -441,5 +517,30 @@ public class FormattableMultilineTextField extends MultilineTextField {
 
 	public void setTextAlignment(TextJustify textAlignment) {
 		this.textAlignment = textAlignment;
+	}
+
+	public void undo() {
+		this.snapshotRecentInputs();
+		this.textUndoHistory.undo(this);
+	}
+
+	public void redo() {
+		this.textUndoHistory.redo(this);
+	}
+
+	public void tick() {
+		this.ticksSinceRecentInput++;
+
+		if (this.ticksSinceRecentInput == 40) {
+			this.snapshotRecentInputs();
+		}
+	}
+
+	public boolean shouldTrackInputs() {
+		return this.trackingInputs;
+	}
+
+	public void setTrackingInputs(boolean tracking) {
+		this.trackingInputs = tracking;
 	}
 }

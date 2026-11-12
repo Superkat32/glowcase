@@ -175,4 +175,9 @@ public abstract class TextEditorScreen extends EditorScreen implements ColorPick
 		// Keyboard shortcuts aren't a worry here as they are handled within the edit box
 		this.queueFocusEditBox();
 	}
+
+	@Override
+	public void tick() {
+		this.getGlowcaseMultilineEditBox().tick();
+	}
 }

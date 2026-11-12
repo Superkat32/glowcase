@@ -6,7 +6,6 @@ import dev.hephaestus.glowcase.client.gui.widget.ingame.SuggestionListWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.HexColorEditBox;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.packet.C2SEditSpriteBlock;
-import dev.hephaestus.glowcase.util.ZOffset;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -37,7 +36,7 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 
 	private ColorPickerWidget colorPickerWidget;
 	private SuggestionListWidget<String> suggestionWidget;
-    private List<String> validSprites = new ArrayList<>();
+	private List<String> validSprites = new ArrayList<>();
 
 	public SpriteBlockEditScreen(SpriteBlockEntity blockEntity) {
 		super(blockEntity);
@@ -51,15 +50,6 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 		this.spriteWidget.setMaxLength(255);
 		this.spriteWidget.setValue(blockEntity.getSprite());
 		this.spriteWidget.setResponder(string -> {
-//			this.undoManager.addAction(new ValueUndoAction<>(
-//				Component.literal("Undo Set Sprite"),
-//				string,
-//				this.blockEntity.getSprite(),
-//				value -> {
-//					this.blockEntity.setSprite(value);
-//					this.spriteWidget.setValue(value);
-//				}
-//			));
 			this.blockEntity.setSprite(this.spriteWidget.getValue());
 		});
 
@@ -71,29 +61,10 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 			.build();
 
 		this.rotationWidget = Button.builder(Component.translatable("gui.glowcase.rotate"), (action) -> {
-			int newRotation = (this.blockEntity.rotation + 45) % 360;
-//			this.undoManager.addAction(new ValueUndoAction<>(
-//				Component.literal("Undo Set Rotation"),
-//				newRotation,
-//				this.blockEntity.rotation,
-//				value -> {
-//					this.blockEntity.rotation = value;
-//				}
-//			));
-			this.blockEntity.rotation = newRotation;
+			this.blockEntity.rotation = (this.blockEntity.rotation + 45) % 360;
 		}).bounds(width / 2 - 90, height / 2 - 25, 180, 20).build();
 
 		this.zOffsetToggle = Button.builder(Component.literal(this.blockEntity.zOffset.name()), action -> {
-			ZOffset newZOffset = blockEntity.zOffset.next();
-//			this.undoManager.addAction(new ValueUndoAction<>(
-//				Component.literal("Undo Set Z Offset"),
-//				newZOffset,
-//				this.blockEntity.zOffset,
-//				value -> {
-//					this.blockEntity.zOffset = value;
-//					this.zOffsetToggle.setMessage(Component.literal(this.blockEntity.zOffset.name()));
-//				}
-//			));
 			blockEntity.zOffset = blockEntity.zOffset.next();
 
 			this.zOffsetToggle.setMessage(Component.literal(this.blockEntity.zOffset.name()));
@@ -111,19 +82,9 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 		this.scaleEntryWidget = new EditBox(this.minecraft.font, width / 2 - 90, height / 2 + 65, 180, 20, Component.empty());
 		this.scaleEntryWidget.setValue(String.valueOf(this.blockEntity.scale));
 		this.scaleEntryWidget.setResponder(string -> {
-			 try {
-				 float newScale = Float.parseFloat(string);
-//				 this.undoManager.addAction(new ValueUndoAction<>(
-//					 Component.literal("Set Scale"),
-//					 newScale,
-//					 this.blockEntity.scale,
-//					 value -> {
-//						 this.blockEntity.scale = value;
-//						 this.scaleEntryWidget.setValue(String.valueOf(value));
-//					 }
-//				 ));
-				 this.blockEntity.scale = newScale;
-			 } catch (NumberFormatException ignored) {}
+			try {
+				this.blockEntity.scale = Float.parseFloat(string);
+			} catch (NumberFormatException ignored) {}
 		});
 
 		this.addRenderableWidget(this.spriteWidget);
@@ -192,16 +153,16 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 
 		if (mouseClickedColorPicker(event, doubleClick)) return true;
 
-        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
-            return suggestionWidget.mouseClicked(event, doubleClick);
-        } else if (!spriteWidget.isMouseOver(mouseX, mouseY)) {
+		if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
+			return suggestionWidget.mouseClicked(event, doubleClick);
+		} else if (!spriteWidget.isMouseOver(mouseX, mouseY)) {
 			spriteWidget.onValueChange(spriteWidget.getValue());
-        } else {
+		} else {
 			suggestionWidget.updateSuggestions(new ArrayList<>(), "", this);
 		}
 
-        return super.mouseClicked(event, doubleClick);
-    }
+		return super.mouseClicked(event, doubleClick);
+	}
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
@@ -213,19 +174,18 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 		return super.mouseDragged(event, dx, dy);
 	}
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
-            suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-            return true;
-        }
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+		if (suggestionWidget.isMouseOver(mouseX, mouseY) && spriteWidget.isFocused()) {
+			suggestionWidget.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+			return true;
+		}
 
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
+		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+	}
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-//		if (this.keyPressedUndoHistory(event)) return true;
 		if (suggestionWidget.keyPressed(event)) {
 			return true;
 		}
@@ -244,9 +204,4 @@ public class SpriteBlockEditScreen extends BlockEditorScreen<SpriteBlockEntity> 
 	public ColorPickerWidget getColorPickerWidget() {
 		return this.colorPickerWidget;
 	}
-
-//	@Override
-//	public UndoManager getUndoManager() {
-//		return this.undoManager;
-//	}
 }
