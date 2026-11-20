@@ -23,6 +23,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -106,6 +107,8 @@ public class NoteEditScreen extends TextEditorScreen {
 			.build();
 		this.glowcaseEditBox.updateSettings(NoteTextColorResource.TXT_COLOR, false, this.textAlignment);
 		this.glowcaseEditBox.textField.seekCursor(Whence.ABSOLUTE, 0);
+		this.glowcaseEditBox.undoRedoActiveColor = CommonColors.LIGHTER_GRAY;
+		this.glowcaseEditBox.undoRedoUnactiveColor = CommonColors.DARK_GRAY;
 
 		this.initJustifyButtons(
 			this.width / 2 - BG_WIDTH / 2,

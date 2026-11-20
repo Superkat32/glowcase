@@ -19,6 +19,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -99,23 +100,6 @@ public class FormattableMultilineTextField extends MultilineTextField {
 	}
 
 	public void trackInput(String input) {
-//		if (this.hasSelection()) { // Can be assumed a deletion occurred
-//			String selected = this.getSelectedText();
-//			if (selected.length() > 1) this.snapshotRecentInputs();
-//
-//			this.recentPos = Math.min(this.cursor(), this.selectCursor);
-//			this.recentDeletes = this.recentDeletes.concat(selected);
-//
-//			if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(selected)) this.snapshotRecentInputs();
-//		} else { // Can be assumed no deletion occurred
-//			if (input.length() > 1) this.snapshotRecentInputs();
-//
-//			if (this.recentInputs.isEmpty()) this.recentPos = Math.min(this.cursor(), this.selectCursor);
-//			this.recentInputs = this.recentInputs.concat(input);
-//
-//			if (SNAPSHOT_ACTIVATING_CHARACTERS.contains(input)) this.snapshotRecentInputs();
-//		}
-
 		if (input.length() > 1 || (this.hasSelection() && !this.recentInputs.isEmpty())) this.snapshotRecentInputs();
 
 		if (this.recentInputs.isEmpty()) this.recentPos = Math.min(this.cursor(), this.selectCursor);
@@ -134,24 +118,6 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		this.textUndoHistory.addAction(
 			new InsertTextUndoAction(this.recentInputs, this.recentDeletes, this.recentPos)
 		);
-
-//		if (!this.recentDeletes.isEmpty()) {
-//			this.textUndoHistory.addAction(
-//				new InsertTextUndoAction(this.recentInputs, this.recentDeletes, this.recentPos)
-//			);
-//		} else {
-//			this.textUndoHistory.addAction(
-//				new InsertTextUndoAction(this.recentInputs, this.getSelectedText(), this.recentPos)
-//			);
-//		}
-
-
-//		if (this.recentIsDeleting) {
-//			this.textUndoHistory.addAction(
-//				new DeleteTextUndoAction(this.recentInputs, this.getSelectedText(), this.recentPos)
-//			);
-//		} else {
-//		}
 
 		this.clearRecentInputs();
 	}
@@ -524,8 +490,17 @@ public class FormattableMultilineTextField extends MultilineTextField {
 		this.textUndoHistory.undo(this);
 	}
 
+	public boolean canUndo() {
+		return this.textUndoHistory.present != null || !this.textUndoHistory.past.isEmpty() || !this.recentInputs.isEmpty();
+	}
+
 	public void redo() {
+		this.snapshotRecentInputs();
 		this.textUndoHistory.redo(this);
+	}
+
+	public boolean canRedo() {
+		return !this.textUndoHistory.future.isEmpty() && this.recentInputs.isEmpty();
 	}
 
 	public void tick() {

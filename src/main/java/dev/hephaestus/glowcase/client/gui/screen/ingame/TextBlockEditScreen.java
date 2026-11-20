@@ -78,6 +78,7 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		).build();
 		this.glowcaseEditBox.updateSettings(this.textBlockEntity.color, this.textBlockEntity.shadow, this.textBlockEntity.textAlignment);
 		this.glowcaseEditBox.textField.seekCursor(Whence.ABSOLUTE, 0);
+
 		this.addRenderableWidget(this.glowcaseEditBox);
 
 		this.colorPickerWidget = this.createColorPickerWidget();
@@ -88,6 +89,8 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		GlowcaseTabNavBar tabNavBar = GlowcaseTabNavBar.builder(
 				this.width, height -> {
 					this.glowcaseEditBox.setY(height + 3);
+//					this.glowcaseEditBox.undoButton.setY(height + 4);
+//					this.glowcaseEditBox.redoButton.setY(height + 4);
 				})
 			.setY(2)
 			.setWidgetAreaPadding(2)

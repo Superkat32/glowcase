@@ -15,23 +15,25 @@ public class IconButtonWidget extends Button {
 	public Identifier hoverIcon;
 	public int iconWidth;
 	public int iconHeight;
-	public int z;
+	public boolean renderBackground;
+	public int color = -1;
 
 	public static IconButtonWidget.Builder builder(Identifier icon, Button.OnPress onPress) {
 		return new IconButtonWidget.Builder(icon, onPress);
 	}
 
-	public IconButtonWidget(int x, int y, int width, int height, int iconWidth, int iconHeight, Identifier icon, @Nullable Identifier hoverIcon, OnPress onPress) {
+	public IconButtonWidget(int x, int y, int width, int height, int iconWidth, int iconHeight, Identifier icon, @Nullable Identifier hoverIcon, boolean renderBackground, OnPress onPress) {
 		super(x, y, width, height, Component.nullToEmpty(""), onPress, Button.DEFAULT_NARRATION);
 		this.icon = icon;
 		this.hoverIcon = hoverIcon;
 		this.iconWidth = iconWidth;
 		this.iconHeight = iconHeight;
+		this.renderBackground = renderBackground;
 	}
 
 	@Override
 	protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		this.extractDefaultSprite(graphics);
+		if (this.renderBackground) this.extractDefaultSprite(graphics);
 
 		Identifier drawnIcon = this.icon;
 		if(this.hoverIcon != null && this.isMouseOver(mouseX, mouseY)) {
@@ -42,16 +44,13 @@ public class IconButtonWidget extends Button {
 			this.getX() + (this.width - this.iconWidth) / 2,
 			this.getY() + (this.height - this.iconHeight) / 2,
 			this.iconWidth,
-			this.iconHeight);
+			this.iconHeight,
+			this.color
+		);
 	}
 
-	public void setPosition(int x, int y, int z, int size, int iconSize) {
-		this.setX(x);
-		this.setY(y);
-		this.setSize(size, size);
-		this.iconWidth = iconSize;
-		this.iconHeight = iconSize;
-		this.z = z;
+	public void setColor(int color) {
+		this.color = color;
 	}
 
 	@Environment(EnvType.CLIENT)
@@ -66,6 +65,7 @@ public class IconButtonWidget extends Button {
 		private int iconHeight = 16;
 		private int width = 150;
 		private int height = 150;
+		private boolean renderBackground = true;
 
 		public Builder(Identifier icon, Button.OnPress onPress) {
 			this.icon = icon;
@@ -95,8 +95,13 @@ public class IconButtonWidget extends Button {
 			return this;
 		}
 
+		public IconButtonWidget.Builder renderBackground(boolean renderBackground) {
+			this.renderBackground = renderBackground;
+			return this;
+		}
+
 		public IconButtonWidget build() {
-			return new IconButtonWidget(this.x, this.y, this.width, this.height, this.iconWidth, this.iconHeight, this.icon, this.hoverIcon, this.onPress);
+			return new IconButtonWidget(this.x, this.y, this.width, this.height, this.iconWidth, this.iconHeight, this.icon, this.hoverIcon, this.renderBackground, this.onPress);
 		}
 
 	}

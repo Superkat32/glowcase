@@ -1,6 +1,8 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.text;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
+import dev.hephaestus.glowcase.Glowcase;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.client.util.GuiGraphicsUtil;
 import dev.hephaestus.glowcase.util.TextJustify;
@@ -11,6 +13,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.MultilineTextField;
 import net.minecraft.client.gui.components.TextCursorUtils;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.Whence;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -18,6 +21,8 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import org.jspecify.annotations.NonNull;
@@ -34,16 +39,21 @@ import java.util.function.Consumer;
  * @author Superkat32
  */
 public class GlowcaseMultilineEditBox extends MultiLineEditBox {
+	private static final Identifier UNDO_ICON = Glowcase.id("text_editor/undo");
+	private static final Identifier REDO_ICON = Glowcase.id("text_editor/redo");
 	// FIXME - Ctrl+right on final word of line moves cursor to beginning of next line, instead of end of that line
 	//  (This is actually a vanilla thing with MultilineTextField)
 	private static final Component ARROW_LEFT_SYMBOL = Component.literal("«");
 	private static final Component ARROW_RIGHT_SYMBOL = Component.literal("»");
 
 	public final FormattableMultilineTextField formatTextField;
+	public final IconButtonWidget undoButton;
+	public final IconButtonWidget redoButton;
 
 	public final Consumer<List<Component>> parsedUpdateListener;
 	public final Font font;
 	public int sideAlignmentPadding;
+	public int textTopPadding;
 	public int lineHeight;
 	public int maxLines;
 	public boolean truncateText;
@@ -53,6 +63,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public int textColor = ColorUtil.WHITE;
 	public boolean textShadow = true;
+	public int undoRedoActiveColor = ColorUtil.WHITE;
+	public int undoRedoUnactiveColor = CommonColors.GRAY;
 
 	public long focusedTime;
 
@@ -86,6 +98,31 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		this.formatTextField.truncateText = truncateText;
 		this.formatTextField.setCursorListener(this::scrollToCursor);
 		this.textField = this.formatTextField;
+
+		this.undoButton = IconButtonWidget
+			.builder(UNDO_ICON, button -> this.undo())
+			.dimensions(0, 0, 12, 12, 8, 8)
+			.renderBackground(false)
+			.build();
+		this.undoButton.setTooltip(
+			Tooltip.create(
+				Component.literal("Text Undo (Ctrl+Z)")
+			)
+		);
+
+		this.redoButton = IconButtonWidget
+			.builder(REDO_ICON, button -> this.redo())
+			.dimensions(0, 0, 12, 12, 8, 8)
+			.renderBackground(false)
+			.build();
+		this.redoButton.setTooltip(
+			Tooltip.create(
+				Component.literal("Text Redo (Ctrl+Y, Ctrl+Shift+Z)")
+			)
+		);
+
+		this.positionUndoRedoButtons();
+		this.updateUndoRedoButtons();
 	}
 
 	public void updateSettings(int textColor, boolean textShadow, TextJustify textAlignment) {
@@ -208,6 +245,17 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		if (this.isHovered()) {
 			graphics.requestCursor(CursorTypes.IBEAM);
 		}
+
+		this.undoButton.extractRenderState(graphics, mouseX, mouseY, a);
+		this.redoButton.extractRenderState(graphics, mouseX, mouseY, a);
+		this.updateUndoRedoButtons();
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (this.undoButton.mouseClicked(event, doubleClick)
+			|| this.redoButton.mouseClicked(event, doubleClick)) return true;
+		return super.mouseClicked(event, doubleClick);
 	}
 
 	@Override
@@ -218,6 +266,13 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		} else {
 			super.onClick(event, doubleClick);
 		}
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		if (this.undoButton.mouseDragged(event, dx, dy)
+			|| this.redoButton.mouseDragged(event, dx, dy)) return true;
+		return super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
@@ -308,6 +363,48 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public void tick() {
 		this.formatTextField.tick();
+	}
+
+	public void updateUndoRedoButtons() {
+		this.undoButton.active = this.canUndo();
+		this.undoButton.setColor(this.canUndo() ? this.undoRedoActiveColor : this.undoRedoUnactiveColor);
+		this.redoButton.active = this.canRedo();
+		this.redoButton.setColor(this.canRedo() ? this.undoRedoActiveColor : this.undoRedoUnactiveColor);
+	}
+
+	public void positionUndoRedoButtons() {
+		this.undoButton.setX(this.getX() + 1);
+		this.undoButton.setY(this.getY() + 2);
+		this.redoButton.setX(this.undoButton.getRight());
+		this.redoButton.setY(this.undoButton.getY());
+	}
+
+	public void undo() {
+		this.formatTextField.undo();
+	}
+
+	public boolean canUndo() {
+		return this.formatTextField.canUndo();
+	}
+
+	public void redo() {
+		this.formatTextField.redo();
+	}
+
+	public boolean canRedo() {
+		return this.formatTextField.canRedo();
+	}
+
+	@Override
+	public void setX(int x) {
+		super.setX(x);
+		this.positionUndoRedoButtons();
+	}
+
+	@Override
+	public void setY(int y) {
+		super.setY(y);
+		this.positionUndoRedoButtons();
 	}
 
 	public static class Builder {
