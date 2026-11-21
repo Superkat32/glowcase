@@ -2,9 +2,11 @@ package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
 import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.GlowcaseEditBox;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.FormattableMultilineTextField;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.GlowcaseMultilineEditBox;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.UndoRedoButtonsWidget;
 import dev.hephaestus.glowcase.client.util.NoteTextColorResource;
 import dev.hephaestus.glowcase.item.component.NoteComponent;
 import dev.hephaestus.glowcase.packet.C2SEditNoteItem;
@@ -15,6 +17,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.Whence;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -51,7 +54,10 @@ public class NoteEditScreen extends TextEditorScreen {
 
 	private List<AbstractWidget> editingWidgets;
 	private GlowcaseMultilineEditBox glowcaseEditBox;
+	private UndoRedoButtonsWidget undoRedoButtons;
 	private Button doneAndCancelButton;
+//	private IconButtonWidget undoButton;
+//	private IconButtonWidget redoButton;
 
 	private List<AbstractWidget> signingWidgets;
 	private GlowcaseEditBox titleEditBox;
@@ -76,6 +82,7 @@ public class NoteEditScreen extends TextEditorScreen {
 			// Default data
 			this.lines = new ArrayList<>();
 
+			// FIXME - This is annoying with line limit actually
 			for (int i = 0; i < NoteComponent.LINES_LIMIT; i++)
 				this.lines.add(Component.literal(""));
 
@@ -89,7 +96,9 @@ public class NoteEditScreen extends TextEditorScreen {
 
 		// Widgets
 		int offset = 7;
+		int topPadding = 12;
 
+		// FIXME - overflow is super borken here
 		this.glowcaseEditBox = GlowcaseMultilineEditBox.builder(
 			this.font, this.lines,
 			this.width / 2 - BG_WIDTH / 2 + TXT_X_PADDING / 2, this.height / 2 - BG_HEIGHT / 2 + TXT_OFF_Y,
@@ -100,15 +109,60 @@ public class NoteEditScreen extends TextEditorScreen {
 			.setMaxLines(10)
 			.setLineHeight(9)
 			.setSideAlignmentPadding(0)
+			.setTextTopPadding(0)
+			.setUndoRedoLeftPadding(-1)
 			.setTruncateText(true)
 			.setOverflowArrowColor(NoteTextColorResource.TXT_COLOR)
 			.setInsetCursorColor(0xCC000000)
 			.setAppendCursorColor(NoteTextColorResource.TXT_COLOR)
+			.setUndoRedoColors(NoteTextColorResource.TXT_COLOR, NoteTextColorResource.UNDO_UNACTIVE_COLOR, true)
 			.build();
 		this.glowcaseEditBox.updateSettings(NoteTextColorResource.TXT_COLOR, false, this.textAlignment);
 		this.glowcaseEditBox.textField.seekCursor(Whence.ABSOLUTE, 0);
-		this.glowcaseEditBox.undoRedoActiveColor = CommonColors.LIGHTER_GRAY;
-		this.glowcaseEditBox.undoRedoUnactiveColor = CommonColors.DARK_GRAY;
+
+		this.undoRedoButtons = UndoRedoButtonsWidget.builder(this.glowcaseEditBox)
+			.setPos(
+				this.width / 2 - BG_WIDTH / 2 + TXT_X_PADDING / 2 - 1,
+				this.height / 2 - BG_HEIGHT / 2 + TXT_OFF_Y - 9
+			)
+			.setButtonScales(12)
+			.setRenderBackgrounds(false)
+			.setRenderShadows(false)
+			.setActiveColor(NoteTextColorResource.TXT_COLOR)
+			.setUnactiveColor(NoteTextColorResource.UNDO_UNACTIVE_COLOR)
+			.build();
+
+//		this.undoButton = IconButtonWidget
+//			.builder(Glowcase.id("text_editor/undo"),button -> this.glowcaseEditBox.undo())
+//			.dimensions(
+//				this.width / 2 - BG_WIDTH / 2,
+//				height / 2 - BG_HEIGHT / 2 - offset - 20 - 4,
+//				20, 20, 8, 8
+//			)
+////			.renderBackground(false)
+//			.build();
+//		this.undoButton.setTooltip(
+//			Tooltip.create(
+//				Component.literal("Text Undo (Ctrl+Z)")
+//			)
+//		);
+//
+//		this.redoButton = IconButtonWidget
+//			.builder(Glowcase.id("text_editor/redo"), button -> this.glowcaseEditBox.redo())
+//			.dimensions(
+//				this.width / 2 - BG_WIDTH / 2 + 22,
+//				height / 2 - BG_HEIGHT / 2 - offset - 20 - 4,
+//				20, 20, 8, 8
+//			)
+////			.renderBackground(false)
+//			.build();
+//		this.redoButton.setTooltip(
+//			Tooltip.create(
+//				Component.literal("Text Redo (Ctrl+Y, Ctrl+Shift+Z)")
+//			)
+//		);
+//		this.redoButton.active = false;
+
 
 		this.initJustifyButtons(
 			this.width / 2 - BG_WIDTH / 2,
@@ -168,8 +222,11 @@ public class NoteEditScreen extends TextEditorScreen {
 		this.authorEditBox.setTextShadow(false);
 
 		this.addRenderableWidget(this.glowcaseEditBox);
+		this.addRenderableWidget(this.undoRedoButtons);
 		this.addRenderableWidget(this.doneAndCancelButton);
 		this.addRenderableWidget(this.signAndFinalizeButton);
+//		this.addRenderableWidget(this.undoButton);
+//		this.addRenderableWidget(this.redoButton);
 		this.editingWidgets = new ArrayList<>();
 		this.editingWidgets.add(this.glowcaseEditBox);
 		this.editingWidgets.add(this.justifyLeftButton);

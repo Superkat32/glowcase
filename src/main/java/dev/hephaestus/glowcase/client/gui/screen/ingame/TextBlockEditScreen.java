@@ -1,5 +1,6 @@
 package dev.hephaestus.glowcase.client.gui.screen.ingame;
 
+import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.block.entity.TextBlockEntity;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.AnchorPositionGridWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
@@ -11,6 +12,7 @@ import dev.hephaestus.glowcase.client.gui.widget.ingame.slider.EditableSliderWid
 import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTab;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.tab.GlowcaseTabNavBar;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.GlowcaseMultilineEditBox;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.UndoRedoButtonsWidget;
 import dev.hephaestus.glowcase.client.util.Tooltips;
 import dev.hephaestus.glowcase.packet.C2SEditTextBlock;
 import dev.hephaestus.glowcase.util.TextJustify;
@@ -45,8 +47,11 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 	private final TextBlockEntity textBlockEntity;
 
 	private GlowcaseMultilineEditBox glowcaseEditBox;
+	private UndoRedoButtonsWidget undoRedoButtons;
 	private HexColorEditBox colorEntryWidget;
 	private HexColorEditBox backgroundColorEntryWidget;
+//	private IconButtonWidget undoButton;
+//	private IconButtonWidget redoButton;
 
 	private ColorPickerWidget colorPickerWidget;
 	private SuggestionListWidget<Identifier> fontSuggestionWidget; // TODO - Preview font beside name :)
@@ -89,8 +94,6 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 		GlowcaseTabNavBar tabNavBar = GlowcaseTabNavBar.builder(
 				this.width, height -> {
 					this.glowcaseEditBox.setY(height + 3);
-//					this.glowcaseEditBox.undoButton.setY(height + 4);
-//					this.glowcaseEditBox.redoButton.setY(height + 4);
 				})
 			.setY(2)
 			.setWidgetAreaPadding(2)
@@ -110,6 +113,31 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 	public List<AbstractWidget> initEditTabWidgets() {
 		// nav bar y padding (2) + tab button height (20) + widget area padding (1) = 23;
 		int firstRowY = 23;
+
+		this.undoRedoButtons = UndoRedoButtonsWidget.builder(this.glowcaseEditBox).build();
+
+//		this.undoButton = IconButtonWidget
+//			.builder(Glowcase.id("text_editor/undo"),button -> this.glowcaseEditBox.undo())
+//			.dimensions(0, 0, 20, 20, 8, 8)
+////			.renderBackground(false)
+//			.build();
+//		this.undoButton.setTooltip(
+//			Tooltip.create(
+//				Component.literal("Text Undo (Ctrl+Z)")
+//			)
+//		);
+//
+//		this.redoButton = IconButtonWidget
+//			.builder(Glowcase.id("text_editor/redo"), button -> this.glowcaseEditBox.redo())
+//			.dimensions(0, 0, 20, 20, 8, 8)
+////			.renderBackground(false)
+//			.build();
+//		this.redoButton.setTooltip(
+//			Tooltip.create(
+//				Component.literal("Text Redo (Ctrl+Y, Ctrl+Shift+Z)")
+//			)
+//		);
+//		this.redoButton.active = false;
 
 		EditableSliderWidget scaleSlider = EditableSliderWidget.builder(
 				this.font, this.textBlockEntity.scale, 0.125f, 16,
@@ -148,23 +176,32 @@ public class TextBlockEditScreen extends TextEditorScreen implements BlockEditor
 			.build();
 		this.backgroundColorEntryWidget.setTooltip(Tooltip.create(Component.translatable("gui.glowcase.background_color")));
 
+//		this.addRenderableWidget(this.undoButton);
+//		this.addRenderableWidget(this.redoButton);
+		this.addRenderableWidget(this.undoRedoButtons);
 		this.addRenderableWidget(scaleSlider);
 		this.initFormattingButtons(0, 0, 0);
 		this.addRenderableWidget(this.colorEntryWidget);
 		this.addRenderableWidget(this.backgroundColorEntryWidget);
 
 		LinearLayout editTabLayout = LinearLayout.horizontal().spacing(2);
+//		editTabLayout.addChild(this.undoButton);
+//		editTabLayout.addChild(this.redoButton, LayoutSettings.defaults().paddingRight(6));
+		editTabLayout.addChild(this.undoRedoButtons, LayoutSettings.defaults().paddingRight(6));
 		editTabLayout.addChild(scaleSlider, LayoutSettings.defaults().paddingRight(6));
 		for (Button formattingButton : this.formattingButtons) {
 			editTabLayout.addChild(formattingButton);
 		}
 		editTabLayout.addChild(this.colorEntryWidget, LayoutSettings.defaults().paddingLeft(6));
-		editTabLayout.addChild(this.backgroundColorEntryWidget, LayoutSettings.defaults().paddingLeft(4));
+		editTabLayout.addChild(this.backgroundColorEntryWidget, LayoutSettings.defaults().paddingLeft(2));
 
 		editTabLayout.arrangeElements(); // Setup initial positioning
 		FrameLayout.centerInRectangle(editTabLayout, 0, firstRowY, this.width, firstRowY); // Finish positioning
 
 		List<AbstractWidget> editTabWidgets = new ArrayList<>(this.formattingButtons);
+//		editTabWidgets.add(this.undoButton);
+//		editTabWidgets.add(this.redoButton);
+		editTabWidgets.add(this.undoRedoButtons);
 		editTabWidgets.add(scaleSlider);
 		editTabWidgets.add(this.colorEntryWidget);
 		editTabWidgets.add(this.backgroundColorEntryWidget);

@@ -1,4 +1,4 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action;
+package dev.hephaestus.glowcase.client.undo.action;
 
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.FormattableMultilineTextField;
 

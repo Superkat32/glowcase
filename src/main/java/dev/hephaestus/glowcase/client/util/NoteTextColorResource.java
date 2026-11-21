@@ -15,6 +15,7 @@ public class NoteTextColorResource implements ResourceManagerReloadListener {
 	private static final Identifier TEXTURE = Glowcase.id("textures/gui/note.png");
 
 	public static int TXT_COLOR = 0x000000;
+	public static int UNDO_UNACTIVE_COLOR = -4539718; // CommonColors#LIGHTER_GRAY
 
 	@Override
 	public void onResourceManagerReload(ResourceManager manager) {
@@ -26,6 +27,7 @@ public class NoteTextColorResource implements ResourceManagerReloadListener {
 				BufferedImage image = ImageIO.read(inputStream);
 
 				TXT_COLOR = image.getRGB(image.getWidth()-1, image.getHeight()-1);
+				UNDO_UNACTIVE_COLOR = image.getRGB(image.getWidth()-2, image.getHeight()-1);
 			} catch (IOException ignored) { }
 		}
 	}

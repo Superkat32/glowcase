@@ -4,6 +4,7 @@ import dev.hephaestus.glowcase.Glowcase;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.IconButtonWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.color.picker.ColorPickerWidget;
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.GlowcaseMultilineEditBox;
+import dev.hephaestus.glowcase.client.gui.widget.ingame.text.UndoRedoButtonsWidget;
 import dev.hephaestus.glowcase.client.util.ColorUtil;
 import dev.hephaestus.glowcase.util.TextJustify;
 import net.minecraft.ChatFormatting;

@@ -1,9 +1,9 @@
 package dev.hephaestus.glowcase.client.gui.widget.ingame.text;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.TextUndoHistory;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action.InsertTextUndoAction;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action.SetValueUndoAction;
+import dev.hephaestus.glowcase.client.undo.TextUndoHistory;
+import dev.hephaestus.glowcase.client.undo.action.InsertTextUndoAction;
+import dev.hephaestus.glowcase.client.undo.action.SetValueUndoAction;
 import dev.hephaestus.glowcase.util.TextJustify;
 import eu.pb4.placeholders.api.ParserContext;
 import eu.pb4.placeholders.api.parsers.NodeParser;
@@ -19,7 +19,6 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -491,7 +490,10 @@ public class FormattableMultilineTextField extends MultilineTextField {
 	}
 
 	public boolean canUndo() {
-		return this.textUndoHistory.present != null || !this.textUndoHistory.past.isEmpty() || !this.recentInputs.isEmpty();
+		return this.textUndoHistory.present != null
+			|| !this.textUndoHistory.past.isEmpty()
+			|| !this.recentDeletes.isEmpty()
+			|| !this.recentInputs.isEmpty();
 	}
 
 	public void redo() {

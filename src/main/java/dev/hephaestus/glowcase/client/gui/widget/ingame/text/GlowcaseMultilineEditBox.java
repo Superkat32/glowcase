@@ -39,10 +39,12 @@ import java.util.function.Consumer;
  * @author Superkat32
  */
 public class GlowcaseMultilineEditBox extends MultiLineEditBox {
-	private static final Identifier UNDO_ICON = Glowcase.id("text_editor/undo");
-	private static final Identifier REDO_ICON = Glowcase.id("text_editor/redo");
 	// FIXME - Ctrl+right on final word of line moves cursor to beginning of next line, instead of end of that line
-	//  (This is actually a vanilla thing with MultilineTextField)
+	//  (This is actually a vanilla bug/thing with MultilineTextField)
+	private static final Identifier UNDO_ICON = Glowcase.id("text_editor/undo");
+	private static final Identifier UNDO_SHADOWLESS_ICON = Glowcase.id("text_editor/undo_shadowless");
+	private static final Identifier REDO_ICON = Glowcase.id("text_editor/redo");
+	private static final Identifier REDO_SHADOWLESS_ICON = Glowcase.id("text_editor/redo_shadowless");
 	private static final Component ARROW_LEFT_SYMBOL = Component.literal("«");
 	private static final Component ARROW_RIGHT_SYMBOL = Component.literal("»");
 
@@ -54,6 +56,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 	public final Font font;
 	public int sideAlignmentPadding;
 	public int textTopPadding;
+	public int undoRedoLeftPadding;
 	public int lineHeight;
 	public int maxLines;
 	public boolean truncateText;
@@ -63,8 +66,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	public int textColor = ColorUtil.WHITE;
 	public boolean textShadow = true;
-	public int undoRedoActiveColor = ColorUtil.WHITE;
-	public int undoRedoUnactiveColor = CommonColors.GRAY;
+	public int undoRedoActiveColor;
+	public int undoRedoUnactiveColor;
 
 	public long focusedTime;
 
@@ -75,14 +78,18 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 	public GlowcaseMultilineEditBox(
 		Font font, List<Component> parsedLines,
 		int x, int y, int width, int height,
-		int sideAlignmentPadding, int lineHeight, int maxLines, boolean truncateText,
+		int sideAlignmentPadding, int textTopPadding, int undoRedoLeftPadding,
+		int lineHeight, int maxLines, boolean truncateText,
 		boolean showBackground, boolean showDecorations,
 		int overflowArrowColor, int appendCursorColor, int insetCursorColor,
+		int undoRedoActiveColor, int undoRedoUnactiveColor, boolean shadowlessUndoRedoIcons,
 		Consumer<List<Component>> parsedUpdateListener
 	) {
 		super(font, x, y, width, height, CommonComponents.EMPTY, CommonComponents.EMPTY, ColorUtil.WHITE, true, -3092272, showBackground, showDecorations);
 		this.font = font;
 		this.sideAlignmentPadding = sideAlignmentPadding;
+		this.textTopPadding = textTopPadding;
+		this.undoRedoLeftPadding = undoRedoLeftPadding;
 		this.lineHeight = lineHeight;
 		this.maxLines = maxLines;
 		this.truncateText = truncateText;
@@ -90,6 +97,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		this.overflowArrowColor = overflowArrowColor;
 		this.appendCursorColor = appendCursorColor;
 		this.insetCursorColor = insetCursorColor;
+		this.undoRedoActiveColor = undoRedoActiveColor;
+		this.undoRedoUnactiveColor = undoRedoUnactiveColor;
 
 		this.focusedTime = Util.getMillis();
 
@@ -100,7 +109,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		this.textField = this.formatTextField;
 
 		this.undoButton = IconButtonWidget
-			.builder(UNDO_ICON, button -> this.undo())
+			.builder(shadowlessUndoRedoIcons ? UNDO_SHADOWLESS_ICON : UNDO_ICON, button -> this.undo())
 			.dimensions(0, 0, 12, 12, 8, 8)
 			.renderBackground(false)
 			.build();
@@ -111,7 +120,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		);
 
 		this.redoButton = IconButtonWidget
-			.builder(REDO_ICON, button -> this.redo())
+			.builder(shadowlessUndoRedoIcons ? REDO_SHADOWLESS_ICON : REDO_ICON, button -> this.redo())
 			.dimensions(0, 0, 12, 12, 8, 8)
 			.renderBackground(false)
 			.build();
@@ -148,6 +157,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		// Debug - View edit regions depending on text alignment (red is center, green is left & right alignments)
 //		graphics.outline(this.getX() + 1, this.getY() + 1, this.getWidth() - 2, this.getHeight() - 2, ColorUtil.RED);
 //		graphics.outline(this.getX() + this.sideAlignmentPadding, this.getY() + 2, this.getWidth() - (this.sideAlignmentPadding * 2), this.getHeight() - 4, ColorUtil.GREEN);
+//		graphics.horizontalLine(this.getX(), this.getX() + this.getWidth(), this.getY() + this.textTopPadding + 1, CommonColors.BLUE);
 
 		// Render text lines
 		boolean insetCursor = false;
@@ -155,7 +165,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		int cursorX = 0;
 		int cursorY = 0;
 		for (int i = 0; i < this.formatTextField.parsedLines.size(); i++) {
-			int lineY = this.getY() + this.innerPadding() + i * this.lineHeight;
+			int lineY = this.getY() + this.innerPadding() + i * this.lineHeight + this.textTopPadding;
 			boolean lineWithinVisibleBounds = this.withinContentAreaTopBottom(lineY, lineY + this.lineHeight);
 			if (!lineWithinVisibleBounds) continue;
 
@@ -246,8 +256,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 			graphics.requestCursor(CursorTypes.IBEAM);
 		}
 
-		this.undoButton.extractRenderState(graphics, mouseX, mouseY, a);
-		this.redoButton.extractRenderState(graphics, mouseX, mouseY, a);
+//		this.undoButton.extractRenderState(graphics, mouseX, mouseY, a);
+//		this.redoButton.extractRenderState(graphics, mouseX, mouseY, a);
 		this.updateUndoRedoButtons();
 	}
 
@@ -270,8 +280,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (this.undoButton.mouseDragged(event, dx, dy)
-			|| this.redoButton.mouseDragged(event, dx, dy)) return true;
+		if (this.undoButton.isMouseOver(event.x(), event.y())
+			|| this.redoButton.isMouseOver(event.x(), event.y())) return true;
 		return super.mouseDragged(event, dx, dy);
 	}
 
@@ -341,7 +351,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 	@Override
 	protected void seekCursorScreen(double mouseX, double mouseY) {
-		double relativeY = mouseY - this.getY() - (this.innerPadding() / 2.0) + this.scrollAmount();
+		double relativeY = mouseY - this.getY() - (this.innerPadding() / 2.0) - this.textTopPadding + this.scrollAmount();
 		int top = Mth.floor(relativeY / this.lineHeight);
 		int lineIndex = Mth.clamp(top, 0, this.textField.getLineCount() - 1);
 		MultilineTextField.StringView clickedLineView = this.textField.getLineView(lineIndex);
@@ -373,7 +383,7 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 	}
 
 	public void positionUndoRedoButtons() {
-		this.undoButton.setX(this.getX() + 1);
+		this.undoButton.setX(this.getX() + this.undoRedoLeftPadding);
 		this.undoButton.setY(this.getY() + 2);
 		this.redoButton.setX(this.undoButton.getRight());
 		this.redoButton.setY(this.undoButton.getY());
@@ -414,6 +424,8 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		private final Consumer<List<Component>> parsedUpdateListener;
 
 		private int sideAlignmentPadding;
+		private int textTopPadding = 0;
+		public int undoRedoLeftPadding = 1;
 		private int lineHeight = 12;
 		private int maxLines = Integer.MAX_VALUE;
 		private boolean truncateText = false;
@@ -422,6 +434,9 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 		private int overflowArrowColor = ColorUtil.WHITE;
 		private int appendCursorColor = 0xFFFFFFFF;
 		private int insetCursorColor = 0xCCFFFFFF;
+		private int undoRedoActiveColor = ColorUtil.WHITE;
+		private int undoRedoUnactiveColor = CommonColors.GRAY;
+		private boolean shadowlessUndoRedoIcons = false;
 
 		public Builder(Font font, List<Component> lines, int x, int y, int width, int height, Consumer<List<Component>> parsedUpdateListener) {
 			this.font = font;
@@ -437,6 +452,16 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 
 		public Builder setSideAlignmentPadding(int sideAlignmentPadding) {
 			this.sideAlignmentPadding = sideAlignmentPadding;
+			return this;
+		}
+
+		public Builder setTextTopPadding(int textTopPadding) {
+			this.textTopPadding = textTopPadding;
+			return this;
+		}
+
+		public Builder setUndoRedoLeftPadding(int undoRedoLeftPadding) {
+			this.undoRedoLeftPadding = undoRedoLeftPadding;
 			return this;
 		}
 
@@ -480,13 +505,22 @@ public class GlowcaseMultilineEditBox extends MultiLineEditBox {
 			return this;
 		}
 
+		public Builder setUndoRedoColors(int activeColor, int unactiveColor, boolean shadowlessIcons) {
+			this.undoRedoActiveColor = activeColor;
+			this.undoRedoUnactiveColor = unactiveColor;
+			this.shadowlessUndoRedoIcons = shadowlessIcons;
+			return this;
+		}
+
 		public GlowcaseMultilineEditBox build() {
 			return new GlowcaseMultilineEditBox(
 				this.font, this.lines,
 				this.x, this.y, this.width, this.height,
-				this.sideAlignmentPadding, this.lineHeight, this.maxLines, this.truncateText,
+				this.sideAlignmentPadding, this.textTopPadding, this.undoRedoLeftPadding,
+				this.lineHeight, this.maxLines, this.truncateText,
 				this.showBackground, this.showDecorations,
 				this.overflowArrowColor, this.appendCursorColor, this.insetCursorColor,
+				this.undoRedoActiveColor, this.undoRedoUnactiveColor, this.shadowlessUndoRedoIcons,
 				this.parsedUpdateListener
 			);
 		}

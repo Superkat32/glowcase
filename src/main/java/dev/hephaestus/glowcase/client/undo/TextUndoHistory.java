@@ -1,7 +1,7 @@
-package dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo;
+package dev.hephaestus.glowcase.client.undo;
 
 import dev.hephaestus.glowcase.client.gui.widget.ingame.text.FormattableMultilineTextField;
-import dev.hephaestus.glowcase.client.gui.widget.ingame.text.undo.action.TextUndoAction;
+import dev.hephaestus.glowcase.client.undo.action.TextUndoAction;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
